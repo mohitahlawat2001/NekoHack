@@ -112,7 +112,7 @@ app.post('/save-all-tabs', async (req, res) => {
 
 // Load tabs
 app.post('/load-tabs', async (req, res) => {
-  const { mongodbUri, date } = req.body;
+  const { mongodbUri, date, groupName } = req.body;
   
   if (!mongodbUri) {
     return res.status(400).json({ success: false, error: 'MongoDB URI is required' });
@@ -130,10 +130,14 @@ app.post('/load-tabs', async (req, res) => {
       query.date = date;
     }
     
+    if (groupName) {
+      query.groupName = groupName;
+    }
+    
     const tabs = await db.collection('tabs')
       .find(query)
       .sort({ createdAt: -1 })
-      .limit(100)
+      .limit(500)
       .toArray();
     
     return res.json({ 
@@ -142,6 +146,40 @@ app.post('/load-tabs', async (req, res) => {
     });
   } catch (error) {
     console.error('Load tabs failed:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+});
+
+// Load groups
+app.post('/load-groups', async (req, res) => {
+  const { mongodbUri } = req.body;
+  
+  if (!mongodbUri) {
+    return res.status(400).json({ success: false, error: 'MongoDB URI is required' });
+  }
+
+  let client;
+  try {
+    client = new MongoClient(mongodbUri);
+    await client.connect();
+    
+    const db = client.db('tabsaver');
+    const groups = await db.collection('tabs')
+      .distinct('groupName');
+    
+    // Filter out null/undefined groups and sort
+    const filteredGroups = groups.filter(g => g).sort();
+    
+    return res.json({ 
+      success: true, 
+      groups: filteredGroups
+    });
+  } catch (error) {
+    console.error('Load groups failed:', error);
     return res.status(500).json({ success: false, error: error.message });
   } finally {
     if (client) {
@@ -175,6 +213,36 @@ app.post('/delete-tab', async (req, res) => {
     });
   } catch (error) {
     console.error('Delete tab failed:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+});
+
+// Delete a group
+app.post('/delete-group', async (req, res) => {
+  const { mongodbUri, groupName } = req.body;
+  
+  if (!mongodbUri || !groupName) {
+    return res.status(400).json({ success: false, error: 'MongoDB URI and group name are required' });
+  }
+
+  let client;
+  try {
+    client = new MongoClient(mongodbUri);
+    await client.connect();
+    
+    const db = client.db('tabsaver');
+    const result = await db.collection('tabs').deleteMany({ groupName: groupName });
+    
+    return res.json({ 
+      success: true,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Delete group failed:', error);
     return res.status(500).json({ success: false, error: error.message });
   } finally {
     if (client) {

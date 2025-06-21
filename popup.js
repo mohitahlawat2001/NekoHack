@@ -2,13 +2,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Set today's date as default
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('date-filter').value = today;
+  
+  // Set today's date as default group name
+  const todayFormatted = formatDateForGroup(new Date());
+  document.getElementById('group-name').value = todayFormatted;
+  document.getElementById('group-name').placeholder = `Default: ${todayFormatted}`;
 
   // Load MongoDB connection from storage
   chrome.storage.local.get(['mongodbUri'], (result) => {
     if (result.mongodbUri) {
       document.getElementById('mongodb-uri').value = result.mongodbUri;
       updateConnectionStatus('Connection saved', 'success');
-      loadSavedTabs(today);
+      loadExistingGroups();
+      loadSavedTabs();
     }
   });
 
@@ -17,13 +23,30 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('save-current-tab').addEventListener('click', handleSaveCurrentTab);
   document.getElementById('save-all-tabs').addEventListener('click', handleSaveAllTabs);
   document.getElementById('refresh-tabs').addEventListener('click', handleRefreshTabs);
+  document.getElementById('group-filter').addEventListener('change', handleRefreshTabs);
+  document.getElementById('existing-groups').addEventListener('change', handleExistingGroupSelect);
 });
+
+function formatDateForGroup(date) {
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+}
+
+function handleExistingGroupSelect() {
+  const existingGroup = document.getElementById('existing-groups').value;
+  if (existingGroup) {
+    document.getElementById('group-name').value = existingGroup;
+  }
+}
+
+function getCurrentGroupName() {
+  const groupName = document.getElementById('group-name').value.trim();
+  return groupName || formatDateForGroup(new Date());
+}
 
 function updateConnectionStatus(message, type) {
   const statusEl = document.getElementById('connection-status');
   statusEl.textContent = message;
   
-  // Use Tailwind classes for status styling
   if (type === 'success') {
     statusEl.className = 'text-sm text-green-500';
   } else if (type === 'error') {
@@ -49,8 +72,8 @@ function handleSaveConnection() {
       if (response && response.success) {
         chrome.storage.local.set({ mongodbUri }, () => {
           updateConnectionStatus('Connection successful and saved', 'success');
-          const today = new Date().toISOString().split('T')[0];
-          loadSavedTabs(today);
+          loadExistingGroups();
+          loadSavedTabs();
         });
       } else {
         updateConnectionStatus(`Connection failed: ${response ? response.error : 'Unknown error'}`, 'error');
@@ -62,25 +85,24 @@ function handleSaveConnection() {
 function handleSaveCurrentTab() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs.length > 0) {
-      const today = new Date().toISOString().split('T')[0];
-      saveTab(tabs[0], today);
+      const groupName = getCurrentGroupName();
+      saveTab(tabs[0], groupName);
     }
   });
 }
 
 function handleSaveAllTabs() {
   chrome.tabs.query({ currentWindow: true }, (tabs) => {
-    const today = new Date().toISOString().split('T')[0];
-    saveAllTabs(tabs, today);
+    const groupName = getCurrentGroupName();
+    saveAllTabs(tabs, groupName);
   });
 }
 
 function handleRefreshTabs() {
-  const dateFilter = document.getElementById('date-filter').value;
-  loadSavedTabs(dateFilter);
+  loadSavedTabs();
 }
 
-function saveTab(tab, date) {
+function saveTab(tab, groupName) {
   chrome.storage.local.get(['mongodbUri'], (result) => {
     if (!result.mongodbUri) {
       alert('Please set up MongoDB connection first');
@@ -91,15 +113,18 @@ function saveTab(tab, date) {
       title: tab.title,
       url: tab.url,
       favicon: tab.favIconUrl || '',
-      date: date
+      groupName: groupName,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString()
     };
 
     chrome.runtime.sendMessage(
       { action: 'saveTab', mongodbUri: result.mongodbUri, tabData },
       (response) => {
         if (response && response.success) {
-          loadSavedTabs(date);
-          alert('Tab saved successfully!');
+          loadExistingGroups();
+          loadSavedTabs();
+          alert(`Tab saved successfully to group: ${groupName}`);
         } else {
           alert(`Failed to save tab: ${response ? response.error : 'Unknown error'}`);
         }
@@ -108,7 +133,7 @@ function saveTab(tab, date) {
   });
 }
 
-function saveAllTabs(tabs, date) {
+function saveAllTabs(tabs, groupName) {
   chrome.storage.local.get(['mongodbUri'], (result) => {
     if (!result.mongodbUri) {
       alert('Please set up MongoDB connection first');
@@ -119,15 +144,18 @@ function saveAllTabs(tabs, date) {
       title: tab.title,
       url: tab.url,
       favicon: tab.favIconUrl || '',
-      date: date
+      groupName: groupName,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString()
     }));
 
     chrome.runtime.sendMessage(
       { action: 'saveAllTabs', mongodbUri: result.mongodbUri, tabsData },
       (response) => {
         if (response && response.success) {
-          loadSavedTabs(date);
-          alert(`${tabsData.length} tabs saved successfully!`);
+          loadExistingGroups();
+          loadSavedTabs();
+          alert(`${tabsData.length} tabs saved successfully to group: ${groupName}`);
         } else {
           alert(`Failed to save tabs: ${response ? response.error : 'Unknown error'}`);
         }
@@ -136,14 +164,61 @@ function saveAllTabs(tabs, date) {
   });
 }
 
-function loadSavedTabs(date) {
+function loadExistingGroups() {
   chrome.storage.local.get(['mongodbUri'], (result) => {
     if (!result.mongodbUri) {
       return;
     }
 
     chrome.runtime.sendMessage(
-      { action: 'loadTabs', mongodbUri: result.mongodbUri, date },
+      { action: 'loadGroups', mongodbUri: result.mongodbUri },
+      (response) => {
+        if (response && response.success) {
+          populateGroupDropdowns(response.groups);
+        }
+      }
+    );
+  });
+}
+
+function populateGroupDropdowns(groups) {
+  const existingGroupsSelect = document.getElementById('existing-groups');
+  const groupFilterSelect = document.getElementById('group-filter');
+  
+  // Clear existing options (except first option)
+  existingGroupsSelect.innerHTML = '<option value="">Select existing group</option>';
+  groupFilterSelect.innerHTML = '<option value="">All groups</option>';
+  
+  // Add groups to dropdowns
+  groups.forEach(group => {
+    const option1 = document.createElement('option');
+    option1.value = group;
+    option1.textContent = group;
+    existingGroupsSelect.appendChild(option1);
+    
+    const option2 = document.createElement('option');
+    option2.value = group;
+    option2.textContent = group;
+    groupFilterSelect.appendChild(option2);
+  });
+}
+
+function loadSavedTabs() {
+  chrome.storage.local.get(['mongodbUri'], (result) => {
+    if (!result.mongodbUri) {
+      return;
+    }
+
+    const dateFilter = document.getElementById('date-filter').value;
+    const groupFilter = document.getElementById('group-filter').value;
+
+    chrome.runtime.sendMessage(
+      { 
+        action: 'loadTabs', 
+        mongodbUri: result.mongodbUri, 
+        date: dateFilter,
+        groupName: groupFilter 
+      },
       (response) => {
         if (response && response.success) {
           displayTabs(response.tabs);
@@ -163,18 +238,51 @@ function displayTabs(tabs) {
     return;
   }
 
+  // Group tabs by group name
+  const groupedTabs = tabs.reduce((groups, tab) => {
+    const groupName = tab.groupName || 'Ungrouped';
+    if (!groups[groupName]) {
+      groups[groupName] = [];
+    }
+    groups[groupName].push(tab);
+    return groups;
+  }, {});
+
   let html = '';
-  tabs.forEach(tab => {
+  
+  Object.keys(groupedTabs).forEach(groupName => {
+    const groupTabs = groupedTabs[groupName];
+    
     html += `
-      <div class="flex items-center p-2 border-b border-gray-200 last:border-0" data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}">
-        <img class="w-4 h-4 mr-2" src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'">
-        <div class="flex-1 min-w-0">
-          <div class="font-medium truncate text-sm">${escapeHTML(tab.title)}</div>
-          <div class="text-xs text-gray-500 truncate">${escapeHTML(tab.url)}</div>
+      <div class="mb-4">
+        <div class="bg-gray-50 px-3 py-2 rounded-t-md border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <h3 class="font-semibold text-sm text-gray-700">${escapeHTML(groupName)} (${groupTabs.length} tabs)</h3>
+            <button class="delete-group-btn text-red-500 hover:text-red-700 text-xs" data-group="${escapeHTML(groupName)}">Delete Group</button>
+          </div>
         </div>
-        <div class="flex gap-1 ml-2">
-          <button class="open-btn bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors" data-action="open">Open</button>
-          <button class="delete-btn bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors" data-action="delete">Delete</button>
+        <div class="border-l border-r border-b border-gray-200 rounded-b-md">
+    `;
+    
+    groupTabs.forEach((tab, index) => {
+      const isLast = index === groupTabs.length - 1;
+      html += `
+        <div class="flex items-center p-2 ${!isLast ? 'border-b border-gray-100' : ''}" data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}">
+          <img class="w-4 h-4 mr-2" src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'">
+          <div class="flex-1 min-w-0">
+            <div class="font-medium truncate text-sm">${escapeHTML(tab.title)}</div>
+            <div class="text-xs text-gray-500 truncate">${escapeHTML(tab.url)}</div>
+            <div class="text-xs text-gray-400">${formatDate(tab.createdAt || tab.date)}</div>
+          </div>
+          <div class="flex gap-1 ml-2">
+            <button class="open-btn bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors" data-action="open">Open</button>
+            <button class="delete-btn bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors" data-action="delete">Delete</button>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += `
         </div>
       </div>
     `;
@@ -182,8 +290,8 @@ function displayTabs(tabs) {
 
   tabsList.innerHTML = html;
 
-  // Add event listeners to all buttons (no inline event handlers)
-  document.querySelectorAll('.tab-item, [data-tab-id]').forEach(tabItem => {
+  // Add event listeners
+  document.querySelectorAll('[data-tab-id]').forEach(tabItem => {
     const openBtn = tabItem.querySelector('.open-btn');
     const deleteBtn = tabItem.querySelector('.delete-btn');
     
@@ -201,6 +309,14 @@ function displayTabs(tabs) {
       });
     }
   });
+
+  // Add event listeners for group deletion
+  document.querySelectorAll('.delete-group-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const groupName = btn.getAttribute('data-group');
+      deleteGroup(groupName);
+    });
+  });
 }
 
 function deleteTab(id) {
@@ -215,8 +331,7 @@ function deleteTab(id) {
       { action: 'deleteTab', mongodbUri: result.mongodbUri, tabId: id },
       (response) => {
         if (response && response.success) {
-          const dateFilter = document.getElementById('date-filter').value;
-          loadSavedTabs(dateFilter);
+          loadSavedTabs();
           alert('Tab deleted successfully!');
         } else {
           alert(`Failed to delete tab: ${response ? response.error : 'Unknown error'}`);
@@ -224,6 +339,35 @@ function deleteTab(id) {
       }
     );
   });
+}
+
+function deleteGroup(groupName) {
+  if (!confirm(`Are you sure you want to delete the entire group "${groupName}" and all its tabs?`)) {
+    return;
+  }
+
+  chrome.storage.local.get(['mongodbUri'], (result) => {
+    if (!result.mongodbUri) return;
+
+    chrome.runtime.sendMessage(
+      { action: 'deleteGroup', mongodbUri: result.mongodbUri, groupName: groupName },
+      (response) => {
+        if (response && response.success) {
+          loadExistingGroups();
+          loadSavedTabs();
+          alert(`Group "${groupName}" deleted successfully!`);
+        } else {
+          alert(`Failed to delete group: ${response ? response.error : 'Unknown error'}`);
+        }
+      }
+    );
+  });
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 }
 
 function escapeHTML(str) {

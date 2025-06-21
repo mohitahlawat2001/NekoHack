@@ -4,9 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tab Saver Pro</title>
-  <!-- Tailwind CSS CDN -->
-<link rel="stylesheet" href="tailwind.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <!-- Local Tailwind CSS file -->
+  <link rel="stylesheet" href="tailwind.min.css">
 </head>
 <body class="bg-gray-100 text-gray-800 w-[400px] m-0 p-0 font-sans">
   <div class="p-4">
@@ -24,6 +23,20 @@
         </button>
       </div>
       <div id="connection-status" class="text-sm"></div>
+    </div>
+
+    <!-- Group Selection Section -->
+    <div class="bg-white rounded-lg shadow p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-2 text-gray-700">Save Group</h2>
+      <div class="flex gap-2 mb-2">
+        <input type="text" id="group-name" placeholder="Enter group name" 
+               class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <select id="existing-groups" 
+                class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">Select existing group</option>
+        </select>
+      </div>
+      <div class="text-xs text-gray-500 mb-2">Default: Today's date group</div>
     </div>
 
     <!-- Tab Management Section -->
@@ -45,8 +58,12 @@
     <div class="bg-white rounded-lg shadow p-4">
       <h2 class="text-lg font-semibold mb-2 text-gray-700">Saved Tabs</h2>
       <div class="flex gap-2 mb-3">
+        <select id="group-filter" 
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">All groups</option>
+        </select>
         <input type="date" id="date-filter" value="" 
-               class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
         <button id="refresh-tabs" 
                 class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md transition-colors">
           Refresh

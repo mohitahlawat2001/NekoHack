@@ -31,13 +31,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
 
     case "loadTabs":
-      loadTabsFromMongoDB(request.mongodbUri, request.date)
+      loadTabsFromMongoDB(request.mongodbUri, request.date, request.groupName)
+        .then((result) => sendResponse(result))
+        .catch((error) => sendResponse({ success: false, error: error.message }));
+      return true;
+
+    case "loadGroups":
+      loadGroupsFromMongoDB(request.mongodbUri)
         .then((result) => sendResponse(result))
         .catch((error) => sendResponse({ success: false, error: error.message }));
       return true;
 
     case "deleteTab":
       deleteTabFromMongoDB(request.mongodbUri, request.tabId)
+        .then((result) => sendResponse(result))
+        .catch((error) => sendResponse({ success: false, error: error.message }));
+      return true;
+
+    case "deleteGroup":
+      deleteGroupFromMongoDB(request.mongodbUri, request.groupName)
         .then((result) => sendResponse(result))
         .catch((error) => sendResponse({ success: false, error: error.message }));
       return true;
@@ -119,14 +131,14 @@ async function saveAllTabsToMongoDB(mongodbUri, tabsData) {
 }
 
 // Load tabs from MongoDB
-async function loadTabsFromMongoDB(mongodbUri, date) {
+async function loadTabsFromMongoDB(mongodbUri, date, groupName) {
   try {
     const response = await fetch(`${API_BASE_URL}/load-tabs`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ mongodbUri, date }),
+      body: JSON.stringify({ mongodbUri, date, groupName }),
     });
 
     if (!response.ok) {
@@ -137,6 +149,29 @@ async function loadTabsFromMongoDB(mongodbUri, date) {
     return result;
   } catch (error) {
     console.error("Load tabs failed:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Load groups from MongoDB
+async function loadGroupsFromMongoDB(mongodbUri) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/load-groups`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ mongodbUri }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Load groups failed:", error);
     return { success: false, error: error.message };
   }
 }
@@ -160,6 +195,29 @@ async function deleteTabFromMongoDB(mongodbUri, tabId) {
     return result;
   } catch (error) {
     console.error("Delete tab failed:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Delete a group from MongoDB
+async function deleteGroupFromMongoDB(mongodbUri, groupName) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/delete-group`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ mongodbUri, groupName }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Delete group failed:", error);
     return { success: false, error: error.message };
   }
 }
