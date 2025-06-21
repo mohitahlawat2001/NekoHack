@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Set today's date as default
-  const today = '2025-06-21'; // Current date from your info
+  const today = '2025-06-21';
   document.getElementById('date-filter').value = today;
   
   // Set today's date as default group name
@@ -25,24 +25,37 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('refresh-tabs').addEventListener('click', handleRefreshTabs);
   document.getElementById('group-filter').addEventListener('change', handleRefreshTabs);
   
-  // Group selection event listeners
-  document.getElementById('new-group-radio').addEventListener('change', handleGroupMethodChange);
-  document.getElementById('existing-group-radio').addEventListener('change', handleGroupMethodChange);
+  // Group selection event listeners - FIXED
+  document.getElementById('new-group-radio').addEventListener('click', handleGroupMethodChange);
+  document.getElementById('existing-group-radio').addEventListener('click', handleGroupMethodChange);
   document.getElementById('new-group-name').addEventListener('input', updateCurrentGroupDisplay);
   document.getElementById('existing-groups-select').addEventListener('change', updateCurrentGroupDisplay);
+  
+  // Also listen for change events
+  document.getElementById('new-group-radio').addEventListener('change', handleGroupMethodChange);
+  document.getElementById('existing-group-radio').addEventListener('change', handleGroupMethodChange);
 });
 
 function handleGroupMethodChange() {
+  console.log('Group method changed'); // Debug log
+  
   const isNewGroup = document.getElementById('new-group-radio').checked;
+  const isExistingGroup = document.getElementById('existing-group-radio').checked;
+  
+  console.log('New group checked:', isNewGroup); // Debug log
+  console.log('Existing group checked:', isExistingGroup); // Debug log
+  
   const newGroupSection = document.getElementById('new-group-section');
   const existingGroupSection = document.getElementById('existing-group-section');
   
   if (isNewGroup) {
     newGroupSection.classList.remove('hidden');
     existingGroupSection.classList.add('hidden');
-  } else {
+    console.log('Showing new group section'); // Debug log
+  } else if (isExistingGroup) {
     newGroupSection.classList.add('hidden');
     existingGroupSection.classList.remove('hidden');
+    console.log('Showing existing group section'); // Debug log
   }
   
   updateCurrentGroupDisplay();
@@ -57,10 +70,8 @@ function getCurrentGroupName() {
   } else {
     const existingGroupName = document.getElementById('existing-groups-select').value;
     if (!existingGroupName) {
-      // If no existing group selected, fall back to new group method
-      document.getElementById('new-group-radio').checked = true;
-      handleGroupMethodChange();
-      return '2025-06-21';
+      // If no existing group selected, show a placeholder
+      return 'Please select a group';
     }
     return existingGroupName;
   }
@@ -68,7 +79,15 @@ function getCurrentGroupName() {
 
 function updateCurrentGroupDisplay() {
   const currentGroup = getCurrentGroupName();
-  document.getElementById('current-group-display').textContent = currentGroup;
+  const displayEl = document.getElementById('current-group-display');
+  displayEl.textContent = currentGroup;
+  
+  // Add visual feedback for invalid states
+  if (currentGroup === 'Please select a group') {
+    displayEl.className = 'text-sm font-semibold text-red-600';
+  } else {
+    displayEl.className = 'text-sm font-semibold text-blue-800';
+  }
 }
 
 function updateConnectionStatus(message, type) {
@@ -112,7 +131,7 @@ function handleSaveConnection() {
 
 function handleSaveCurrentTab() {
   const groupName = getCurrentGroupName();
-  if (!groupName) {
+  if (!groupName || groupName === 'Please select a group') {
     alert('Please select or enter a group name');
     return;
   }
@@ -126,7 +145,7 @@ function handleSaveCurrentTab() {
 
 function handleSaveAllTabs() {
   const groupName = getCurrentGroupName();
-  if (!groupName) {
+  if (!groupName || groupName === 'Please select a group') {
     alert('Please select or enter a group name');
     return;
   }
@@ -152,9 +171,9 @@ function saveTab(tab, groupName) {
       url: tab.url,
       favicon: tab.favIconUrl || '',
       groupName: groupName,
-      date: '2025-06-21', // Current date
+      date: '2025-06-21',
       createdAt: new Date().toISOString(),
-      createdBy: 'mohitahlawat2001' // Your username
+      createdBy: 'mohitahlawat2001'
     };
 
     chrome.runtime.sendMessage(
@@ -184,9 +203,9 @@ function saveAllTabs(tabs, groupName) {
       url: tab.url,
       favicon: tab.favIconUrl || '',
       groupName: groupName,
-      date: '2025-06-21', // Current date
+      date: '2025-06-21',
       createdAt: new Date().toISOString(),
-      createdBy: 'mohitahlawat2001' // Your username
+      createdBy: 'mohitahlawat2001'
     }));
 
     chrome.runtime.sendMessage(
@@ -244,15 +263,26 @@ function populateGroupDropdowns(groups) {
 
   // Update the existing groups section visibility based on available groups
   const existingGroupRadio = document.getElementById('existing-group-radio');
+  const existingGroupLabel = existingGroupRadio.parentElement;
+  
   if (groups.length === 0) {
     existingGroupRadio.disabled = true;
-    existingGroupRadio.parentElement.classList.add('opacity-50');
-    document.getElementById('new-group-radio').checked = true;
-    handleGroupMethodChange();
+    existingGroupLabel.classList.add('opacity-50', 'cursor-not-allowed');
+    existingGroupLabel.title = 'No existing groups found. Save some tabs first.';
+    
+    // Force new group selection if existing is selected but no groups available
+    if (existingGroupRadio.checked) {
+      document.getElementById('new-group-radio').checked = true;
+      handleGroupMethodChange();
+    }
   } else {
     existingGroupRadio.disabled = false;
-    existingGroupRadio.parentElement.classList.remove('opacity-50');
+    existingGroupLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+    existingGroupLabel.title = '';
   }
+  
+  // Trigger update after groups are loaded
+  updateCurrentGroupDisplay();
 }
 
 function loadSavedTabs() {
