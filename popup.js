@@ -1,12 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Set today's date as default
-  const today = new Date().toISOString().split('T')[0];
+  const today = '2025-06-21'; // Current date from your info
   document.getElementById('date-filter').value = today;
   
   // Set today's date as default group name
-  const todayFormatted = formatDateForGroup(new Date());
-  document.getElementById('group-name').value = todayFormatted;
-  document.getElementById('group-name').placeholder = `Default: ${todayFormatted}`;
+  document.getElementById('new-group-name').value = today;
+  document.getElementById('new-group-name').placeholder = `Enter new group name (default: ${today})`;
+  updateCurrentGroupDisplay();
 
   // Load MongoDB connection from storage
   chrome.storage.local.get(['mongodbUri'], (result) => {
@@ -24,23 +24,51 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('save-all-tabs').addEventListener('click', handleSaveAllTabs);
   document.getElementById('refresh-tabs').addEventListener('click', handleRefreshTabs);
   document.getElementById('group-filter').addEventListener('change', handleRefreshTabs);
-  document.getElementById('existing-groups').addEventListener('change', handleExistingGroupSelect);
+  
+  // Group selection event listeners
+  document.getElementById('new-group-radio').addEventListener('change', handleGroupMethodChange);
+  document.getElementById('existing-group-radio').addEventListener('change', handleGroupMethodChange);
+  document.getElementById('new-group-name').addEventListener('input', updateCurrentGroupDisplay);
+  document.getElementById('existing-groups-select').addEventListener('change', updateCurrentGroupDisplay);
 });
 
-function formatDateForGroup(date) {
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD format
-}
-
-function handleExistingGroupSelect() {
-  const existingGroup = document.getElementById('existing-groups').value;
-  if (existingGroup) {
-    document.getElementById('group-name').value = existingGroup;
+function handleGroupMethodChange() {
+  const isNewGroup = document.getElementById('new-group-radio').checked;
+  const newGroupSection = document.getElementById('new-group-section');
+  const existingGroupSection = document.getElementById('existing-group-section');
+  
+  if (isNewGroup) {
+    newGroupSection.classList.remove('hidden');
+    existingGroupSection.classList.add('hidden');
+  } else {
+    newGroupSection.classList.add('hidden');
+    existingGroupSection.classList.remove('hidden');
   }
+  
+  updateCurrentGroupDisplay();
 }
 
 function getCurrentGroupName() {
-  const groupName = document.getElementById('group-name').value.trim();
-  return groupName || formatDateForGroup(new Date());
+  const isNewGroup = document.getElementById('new-group-radio').checked;
+  
+  if (isNewGroup) {
+    const newGroupName = document.getElementById('new-group-name').value.trim();
+    return newGroupName || '2025-06-21'; // Default to today's date
+  } else {
+    const existingGroupName = document.getElementById('existing-groups-select').value;
+    if (!existingGroupName) {
+      // If no existing group selected, fall back to new group method
+      document.getElementById('new-group-radio').checked = true;
+      handleGroupMethodChange();
+      return '2025-06-21';
+    }
+    return existingGroupName;
+  }
+}
+
+function updateCurrentGroupDisplay() {
+  const currentGroup = getCurrentGroupName();
+  document.getElementById('current-group-display').textContent = currentGroup;
 }
 
 function updateConnectionStatus(message, type) {
@@ -83,17 +111,27 @@ function handleSaveConnection() {
 }
 
 function handleSaveCurrentTab() {
+  const groupName = getCurrentGroupName();
+  if (!groupName) {
+    alert('Please select or enter a group name');
+    return;
+  }
+  
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs.length > 0) {
-      const groupName = getCurrentGroupName();
       saveTab(tabs[0], groupName);
     }
   });
 }
 
 function handleSaveAllTabs() {
+  const groupName = getCurrentGroupName();
+  if (!groupName) {
+    alert('Please select or enter a group name');
+    return;
+  }
+  
   chrome.tabs.query({ currentWindow: true }, (tabs) => {
-    const groupName = getCurrentGroupName();
     saveAllTabs(tabs, groupName);
   });
 }
@@ -114,8 +152,9 @@ function saveTab(tab, groupName) {
       url: tab.url,
       favicon: tab.favIconUrl || '',
       groupName: groupName,
-      date: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString()
+      date: '2025-06-21', // Current date
+      createdAt: new Date().toISOString(),
+      createdBy: 'mohitahlawat2001' // Your username
     };
 
     chrome.runtime.sendMessage(
@@ -124,7 +163,7 @@ function saveTab(tab, groupName) {
         if (response && response.success) {
           loadExistingGroups();
           loadSavedTabs();
-          alert(`Tab saved successfully to group: ${groupName}`);
+          alert(`Tab saved successfully to group: "${groupName}"`);
         } else {
           alert(`Failed to save tab: ${response ? response.error : 'Unknown error'}`);
         }
@@ -145,8 +184,9 @@ function saveAllTabs(tabs, groupName) {
       url: tab.url,
       favicon: tab.favIconUrl || '',
       groupName: groupName,
-      date: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString()
+      date: '2025-06-21', // Current date
+      createdAt: new Date().toISOString(),
+      createdBy: 'mohitahlawat2001' // Your username
     }));
 
     chrome.runtime.sendMessage(
@@ -155,7 +195,7 @@ function saveAllTabs(tabs, groupName) {
         if (response && response.success) {
           loadExistingGroups();
           loadSavedTabs();
-          alert(`${tabsData.length} tabs saved successfully to group: ${groupName}`);
+          alert(`${tabsData.length} tabs saved successfully to group: "${groupName}"`);
         } else {
           alert(`Failed to save tabs: ${response ? response.error : 'Unknown error'}`);
         }
@@ -182,11 +222,11 @@ function loadExistingGroups() {
 }
 
 function populateGroupDropdowns(groups) {
-  const existingGroupsSelect = document.getElementById('existing-groups');
+  const existingGroupsSelect = document.getElementById('existing-groups-select');
   const groupFilterSelect = document.getElementById('group-filter');
   
   // Clear existing options (except first option)
-  existingGroupsSelect.innerHTML = '<option value="">Select existing group</option>';
+  existingGroupsSelect.innerHTML = '<option value="">Select an existing group</option>';
   groupFilterSelect.innerHTML = '<option value="">All groups</option>';
   
   // Add groups to dropdowns
@@ -201,6 +241,18 @@ function populateGroupDropdowns(groups) {
     option2.textContent = group;
     groupFilterSelect.appendChild(option2);
   });
+
+  // Update the existing groups section visibility based on available groups
+  const existingGroupRadio = document.getElementById('existing-group-radio');
+  if (groups.length === 0) {
+    existingGroupRadio.disabled = true;
+    existingGroupRadio.parentElement.classList.add('opacity-50');
+    document.getElementById('new-group-radio').checked = true;
+    handleGroupMethodChange();
+  } else {
+    existingGroupRadio.disabled = false;
+    existingGroupRadio.parentElement.classList.remove('opacity-50');
+  }
 }
 
 function loadSavedTabs() {
@@ -250,31 +302,35 @@ function displayTabs(tabs) {
 
   let html = '';
   
-  Object.keys(groupedTabs).forEach(groupName => {
+  Object.keys(groupedTabs).sort().forEach(groupName => {
     const groupTabs = groupedTabs[groupName];
     
     html += `
       <div class="mb-4">
-        <div class="bg-gray-50 px-3 py-2 rounded-t-md border-b border-gray-200">
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 rounded-t-md border-b border-blue-200">
           <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-sm text-gray-700">${escapeHTML(groupName)} (${groupTabs.length} tabs)</h3>
-            <button class="delete-group-btn text-red-500 hover:text-red-700 text-xs" data-group="${escapeHTML(groupName)}">Delete Group</button>
+            <h3 class="font-semibold text-sm text-blue-800">📁 ${escapeHTML(groupName)} <span class="text-blue-600">(${groupTabs.length} tabs)</span></h3>
+            <div class="flex gap-2">
+              <button class="open-all-group-btn text-blue-600 hover:text-blue-800 text-xs font-medium" data-group="${escapeHTML(groupName)}">Open All</button>
+              <button class="delete-group-btn text-red-500 hover:text-red-700 text-xs font-medium" data-group="${escapeHTML(groupName)}">Delete Group</button>
+            </div>
           </div>
         </div>
-        <div class="border-l border-r border-b border-gray-200 rounded-b-md">
+        <div class="border-l border-r border-b border-gray-200 rounded-b-md bg-white">
     `;
     
     groupTabs.forEach((tab, index) => {
       const isLast = index === groupTabs.length - 1;
+      const createdDate = formatDate(tab.createdAt || tab.date);
       html += `
-        <div class="flex items-center p-2 ${!isLast ? 'border-b border-gray-100' : ''}" data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}">
-          <img class="w-4 h-4 mr-2" src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'">
+        <div class="flex items-center p-3 ${!isLast ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors" data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}">
+          <img class="w-4 h-4 mr-3 flex-shrink-0" src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'">
           <div class="flex-1 min-w-0">
-            <div class="font-medium truncate text-sm">${escapeHTML(tab.title)}</div>
+            <div class="font-medium truncate text-sm text-gray-900">${escapeHTML(tab.title)}</div>
             <div class="text-xs text-gray-500 truncate">${escapeHTML(tab.url)}</div>
-            <div class="text-xs text-gray-400">${formatDate(tab.createdAt || tab.date)}</div>
+            <div class="text-xs text-gray-400 mt-1">💾 ${createdDate}</div>
           </div>
-          <div class="flex gap-1 ml-2">
+          <div class="flex gap-1 ml-2 flex-shrink-0">
             <button class="open-btn bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition-colors" data-action="open">Open</button>
             <button class="delete-btn bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors" data-action="delete">Delete</button>
           </div>
@@ -310,12 +366,31 @@ function displayTabs(tabs) {
     }
   });
 
-  // Add event listeners for group deletion
+  // Add event listeners for group actions
   document.querySelectorAll('.delete-group-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const groupName = btn.getAttribute('data-group');
       deleteGroup(groupName);
     });
+  });
+
+  document.querySelectorAll('.open-all-group-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const groupName = btn.getAttribute('data-group');
+      openAllTabsInGroup(groupName, groupedTabs[groupName]);
+    });
+  });
+}
+
+function openAllTabsInGroup(groupName, tabs) {
+  if (!confirm(`Open all ${tabs.length} tabs from group "${groupName}"?`)) {
+    return;
+  }
+
+  tabs.forEach((tab, index) => {
+    setTimeout(() => {
+      chrome.tabs.create({ url: tab.url, active: index === 0 });
+    }, index * 100); // Small delay to prevent overwhelming the browser
   });
 }
 
@@ -355,7 +430,7 @@ function deleteGroup(groupName) {
         if (response && response.success) {
           loadExistingGroups();
           loadSavedTabs();
-          alert(`Group "${groupName}" deleted successfully!`);
+          alert(`Group "${groupName}" deleted successfully! (${response.deletedCount} tabs removed)`);
         } else {
           alert(`Failed to delete group: ${response ? response.error : 'Unknown error'}`);
         }

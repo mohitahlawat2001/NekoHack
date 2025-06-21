@@ -27,16 +27,41 @@
 
     <!-- Group Selection Section -->
     <div class="bg-white rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-2 text-gray-700">Save Group</h2>
-      <div class="flex gap-2 mb-2">
-        <input type="text" id="group-name" placeholder="Enter group name" 
-               class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-        <select id="existing-groups" 
-                class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-          <option value="">Select existing group</option>
-        </select>
+      <h2 class="text-lg font-semibold mb-2 text-gray-700">Select or Create Group</h2>
+      
+      <!-- Radio buttons for selection method -->
+      <div class="flex gap-4 mb-3">
+        <label class="flex items-center">
+          <input type="radio" name="group-method" value="new" id="new-group-radio" class="mr-2" checked>
+          <span class="text-sm">Create New Group</span>
+        </label>
+        <label class="flex items-center">
+          <input type="radio" name="group-method" value="existing" id="existing-group-radio" class="mr-2">
+          <span class="text-sm">Use Existing Group</span>
+        </label>
       </div>
-      <div class="text-xs text-gray-500 mb-2">Default: Today's date group</div>
+
+      <!-- New group input -->
+      <div id="new-group-section" class="mb-3">
+        <input type="text" id="new-group-name" placeholder="Enter new group name" 
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <div class="text-xs text-gray-500 mt-1">Default: 2025-06-21 (Today's date)</div>
+      </div>
+
+      <!-- Existing group selection -->
+      <div id="existing-group-section" class="mb-3 hidden">
+        <select id="existing-groups-select" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">Select an existing group</option>
+        </select>
+        <div class="text-xs text-gray-500 mt-1">Choose from previously created groups</div>
+      </div>
+
+      <!-- Current selected group display -->
+      <div class="bg-blue-50 border border-blue-200 rounded-md p-2">
+        <div class="text-xs text-blue-600 font-medium">Selected Group:</div>
+        <div id="current-group-display" class="text-sm font-semibold text-blue-800">2025-06-21</div>
+      </div>
     </div>
 
     <!-- Tab Management Section -->
@@ -62,7 +87,7 @@
                 class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           <option value="">All groups</option>
         </select>
-        <input type="date" id="date-filter" value="" 
+        <input type="date" id="date-filter" value="2025-06-21" 
                class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
         <button id="refresh-tabs" 
                 class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md transition-colors">
