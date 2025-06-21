@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('refresh-tabs').addEventListener('click', handleRefreshTabs);
   document.getElementById('group-filter').addEventListener('change', handleRefreshTabs);
   
-  // Group selection event listeners - FIXED
+  // Group selection event listeners
   document.getElementById('new-group-radio').addEventListener('click', handleGroupMethodChange);
   document.getElementById('existing-group-radio').addEventListener('click', handleGroupMethodChange);
   document.getElementById('new-group-name').addEventListener('input', updateCurrentGroupDisplay);
@@ -37,13 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function handleGroupMethodChange() {
-  console.log('Group method changed'); // Debug log
-  
   const isNewGroup = document.getElementById('new-group-radio').checked;
   const isExistingGroup = document.getElementById('existing-group-radio').checked;
-  
-  console.log('New group checked:', isNewGroup); // Debug log
-  console.log('Existing group checked:', isExistingGroup); // Debug log
   
   const newGroupSection = document.getElementById('new-group-section');
   const existingGroupSection = document.getElementById('existing-group-section');
@@ -51,11 +46,9 @@ function handleGroupMethodChange() {
   if (isNewGroup) {
     newGroupSection.classList.remove('hidden');
     existingGroupSection.classList.add('hidden');
-    console.log('Showing new group section'); // Debug log
   } else if (isExistingGroup) {
     newGroupSection.classList.add('hidden');
     existingGroupSection.classList.remove('hidden');
-    console.log('Showing existing group section'); // Debug log
   }
   
   updateCurrentGroupDisplay();
@@ -66,15 +59,18 @@ function getCurrentGroupName() {
   
   if (isNewGroup) {
     const newGroupName = document.getElementById('new-group-name').value.trim();
-    return newGroupName || '2025-06-21'; // Default to today's date
+    return newGroupName || '2025-06-21';
   } else {
     const existingGroupName = document.getElementById('existing-groups-select').value;
     if (!existingGroupName) {
-      // If no existing group selected, show a placeholder
       return 'Please select a group';
     }
     return existingGroupName;
   }
+}
+
+function getCurrentNotes() {
+  return document.getElementById('tab-notes').value.trim();
 }
 
 function updateCurrentGroupDisplay() {
@@ -82,7 +78,6 @@ function updateCurrentGroupDisplay() {
   const displayEl = document.getElementById('current-group-display');
   displayEl.textContent = currentGroup;
   
-  // Add visual feedback for invalid states
   if (currentGroup === 'Please select a group') {
     displayEl.className = 'text-sm font-semibold text-red-600';
   } else {
@@ -115,7 +110,6 @@ function handleSaveConnection() {
   chrome.runtime.sendMessage(
     { action: 'testMongoDBConnection', mongodbUri },
     (response) => {
-      console.log('Connection test response:', response);
       if (response && response.success) {
         chrome.storage.local.set({ mongodbUri }, () => {
           updateConnectionStatus('Connection successful and saved', 'success');
@@ -138,7 +132,8 @@ function handleSaveCurrentTab() {
   
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs.length > 0) {
-      saveTab(tabs[0], groupName);
+      const notes = getCurrentNotes();
+      saveTab(tabs[0], groupName, notes);
     }
   });
 }
@@ -151,7 +146,8 @@ function handleSaveAllTabs() {
   }
   
   chrome.tabs.query({ currentWindow: true }, (tabs) => {
-    saveAllTabs(tabs, groupName);
+    const notes = getCurrentNotes();
+    saveAllTabs(tabs, groupName, notes);
   });
 }
 
@@ -159,7 +155,7 @@ function handleRefreshTabs() {
   loadSavedTabs();
 }
 
-function saveTab(tab, groupName) {
+function saveTab(tab, groupName, notes) {
   chrome.storage.local.get(['mongodbUri'], (result) => {
     if (!result.mongodbUri) {
       alert('Please set up MongoDB connection first');
@@ -171,6 +167,7 @@ function saveTab(tab, groupName) {
       url: tab.url,
       favicon: tab.favIconUrl || '',
       groupName: groupName,
+      notes: notes,
       date: '2025-06-21',
       createdAt: new Date().toISOString(),
       createdBy: 'mohitahlawat2001'
@@ -182,6 +179,8 @@ function saveTab(tab, groupName) {
         if (response && response.success) {
           loadExistingGroups();
           loadSavedTabs();
+          // Clear notes after successful save
+          document.getElementById('tab-notes').value = '';
           alert(`Tab saved successfully to group: "${groupName}"`);
         } else {
           alert(`Failed to save tab: ${response ? response.error : 'Unknown error'}`);
@@ -191,7 +190,7 @@ function saveTab(tab, groupName) {
   });
 }
 
-function saveAllTabs(tabs, groupName) {
+function saveAllTabs(tabs, groupName, notes) {
   chrome.storage.local.get(['mongodbUri'], (result) => {
     if (!result.mongodbUri) {
       alert('Please set up MongoDB connection first');
@@ -203,6 +202,7 @@ function saveAllTabs(tabs, groupName) {
       url: tab.url,
       favicon: tab.favIconUrl || '',
       groupName: groupName,
+      notes: notes,
       date: '2025-06-21',
       createdAt: new Date().toISOString(),
       createdBy: 'mohitahlawat2001'
@@ -214,6 +214,8 @@ function saveAllTabs(tabs, groupName) {
         if (response && response.success) {
           loadExistingGroups();
           loadSavedTabs();
+          // Clear notes after successful save
+          document.getElementById('tab-notes').value = '';
           alert(`${tabsData.length} tabs saved successfully to group: "${groupName}"`);
         } else {
           alert(`Failed to save tabs: ${response ? response.error : 'Unknown error'}`);
@@ -244,11 +246,9 @@ function populateGroupDropdowns(groups) {
   const existingGroupsSelect = document.getElementById('existing-groups-select');
   const groupFilterSelect = document.getElementById('group-filter');
   
-  // Clear existing options (except first option)
   existingGroupsSelect.innerHTML = '<option value="">Select an existing group</option>';
   groupFilterSelect.innerHTML = '<option value="">All groups</option>';
   
-  // Add groups to dropdowns
   groups.forEach(group => {
     const option1 = document.createElement('option');
     option1.value = group;
@@ -261,7 +261,6 @@ function populateGroupDropdowns(groups) {
     groupFilterSelect.appendChild(option2);
   });
 
-  // Update the existing groups section visibility based on available groups
   const existingGroupRadio = document.getElementById('existing-group-radio');
   const existingGroupLabel = existingGroupRadio.parentElement;
   
@@ -270,7 +269,6 @@ function populateGroupDropdowns(groups) {
     existingGroupLabel.classList.add('opacity-50', 'cursor-not-allowed');
     existingGroupLabel.title = 'No existing groups found. Save some tabs first.';
     
-    // Force new group selection if existing is selected but no groups available
     if (existingGroupRadio.checked) {
       document.getElementById('new-group-radio').checked = true;
       handleGroupMethodChange();
@@ -281,7 +279,6 @@ function populateGroupDropdowns(groups) {
     existingGroupLabel.title = '';
   }
   
-  // Trigger update after groups are loaded
   updateCurrentGroupDisplay();
 }
 
@@ -312,6 +309,21 @@ function loadSavedTabs() {
   });
 }
 
+function toggleGroup(groupName) {
+  const groupContent = document.getElementById(`group-content-${groupName}`);
+  const toggleIcon = document.getElementById(`toggle-icon-${groupName}`);
+  
+  if (groupContent.classList.contains('hidden')) {
+    groupContent.classList.remove('hidden');
+    toggleIcon.textContent = '🔽';
+    toggleIcon.title = 'Collapse group';
+  } else {
+    groupContent.classList.add('hidden');
+    toggleIcon.textContent = '▶️';
+    toggleIcon.title = 'Expand group';
+  }
+}
+
 function displayTabs(tabs) {
   const tabsList = document.getElementById('tabs-list');
   
@@ -334,30 +346,40 @@ function displayTabs(tabs) {
   
   Object.keys(groupedTabs).sort().forEach(groupName => {
     const groupTabs = groupedTabs[groupName];
+    const safeGroupName = groupName.replace(/[^a-zA-Z0-9]/g, '_'); // Safe ID
     
     html += `
       <div class="mb-4">
         <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 rounded-t-md border-b border-blue-200">
           <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-sm text-blue-800">📁 ${escapeHTML(groupName)} <span class="text-blue-600">(${groupTabs.length} tabs)</span></h3>
+            <div class="flex items-center gap-2">
+              <button class="toggle-group-btn text-blue-800 hover:text-blue-900 focus:outline-none" 
+                      id="toggle-icon-${safeGroupName}" 
+                      title="Collapse group"
+                      data-group="${safeGroupName}">🔽</button>
+              <h3 class="font-semibold text-sm text-blue-800">📁 ${escapeHTML(groupName)} <span class="text-blue-600">(${groupTabs.length} tabs)</span></h3>
+            </div>
             <div class="flex gap-2">
               <button class="open-all-group-btn text-blue-600 hover:text-blue-800 text-xs font-medium" data-group="${escapeHTML(groupName)}">Open All</button>
               <button class="delete-group-btn text-red-500 hover:text-red-700 text-xs font-medium" data-group="${escapeHTML(groupName)}">Delete Group</button>
             </div>
           </div>
         </div>
-        <div class="border-l border-r border-b border-gray-200 rounded-b-md bg-white">
+        <div class="border-l border-r border-b border-gray-200 rounded-b-md bg-white" id="group-content-${safeGroupName}">
     `;
     
     groupTabs.forEach((tab, index) => {
       const isLast = index === groupTabs.length - 1;
       const createdDate = formatDate(tab.createdAt || tab.date);
+      const hasNotes = tab.notes && tab.notes.trim();
+      
       html += `
         <div class="flex items-center p-3 ${!isLast ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors" data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}">
           <img class="w-4 h-4 mr-3 flex-shrink-0" src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'">
-          <div class="flex-1 min-w-0">
-            <div class="font-medium truncate text-sm text-gray-900">${escapeHTML(tab.title)}</div>
-            <div class="text-xs text-gray-500 truncate">${escapeHTML(tab.url)}</div>
+          <div class="flex-1 min-w-0 max-w-[240px]">
+            <div class="font-medium truncate text-sm text-gray-900" title="${escapeHTML(tab.title)}">${escapeHTML(tab.title)}</div>
+            <div class="text-xs text-gray-500 truncate" title="${escapeHTML(tab.url)}">${escapeHTML(tab.url)}</div>
+            ${hasNotes ? `<div class="text-xs text-green-600 mt-1 truncate" title="${escapeHTML(tab.notes)}">📝 ${escapeHTML(tab.notes)}</div>` : ''}
             <div class="text-xs text-gray-400 mt-1">💾 ${createdDate}</div>
           </div>
           <div class="flex gap-1 ml-2 flex-shrink-0">
@@ -376,7 +398,7 @@ function displayTabs(tabs) {
 
   tabsList.innerHTML = html;
 
-  // Add event listeners
+  // Add event listeners for tabs
   document.querySelectorAll('[data-tab-id]').forEach(tabItem => {
     const openBtn = tabItem.querySelector('.open-btn');
     const deleteBtn = tabItem.querySelector('.delete-btn');
@@ -410,6 +432,14 @@ function displayTabs(tabs) {
       openAllTabsInGroup(groupName, groupedTabs[groupName]);
     });
   });
+
+  // Add event listeners for toggle buttons
+  document.querySelectorAll('.toggle-group-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const safeGroupName = btn.getAttribute('data-group');
+      toggleGroup(safeGroupName);
+    });
+  });
 }
 
 function openAllTabsInGroup(groupName, tabs) {
@@ -420,7 +450,7 @@ function openAllTabsInGroup(groupName, tabs) {
   tabs.forEach((tab, index) => {
     setTimeout(() => {
       chrome.tabs.create({ url: tab.url, active: index === 0 });
-    }, index * 100); // Small delay to prevent overwhelming the browser
+    }, index * 100);
   });
 }
 
