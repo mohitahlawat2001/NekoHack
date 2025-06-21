@@ -1,0 +1,6 @@
+/* Custom styles that aren't covered by Tailwind */
+.w-\[400px\] {
+  width: 400px;
+}
+
+/* Add other custom styles as needed */

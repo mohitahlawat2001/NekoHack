@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tab Saver Pro</title>
+  <!-- Tailwind CSS CDN -->
+<link rel="stylesheet" href="tailwind.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-100 text-gray-800 w-[400px] m-0 p-0 font-sans">
+  <div class="p-4">
+    <h1 class="text-center text-xl font-bold text-gray-700 mb-4">Tab Saver Pro</h1>
+    
+    <!-- MongoDB Connection Section -->
+    <div class="bg-white rounded-lg shadow p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-2 text-gray-700">MongoDB Connection</h2>
+      <div class="flex mb-2">
+        <input type="text" id="mongodb-uri" placeholder="MongoDB Connection URI" 
+               class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <button id="save-connection" 
+                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-r-md transition-colors">
+          Save
+        </button>
+      </div>
+      <div id="connection-status" class="text-sm"></div>
+    </div>
+
+    <!-- Tab Management Section -->
+    <div class="bg-white rounded-lg shadow p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-2 text-gray-700">Tab Management</h2>
+      <div class="flex gap-2">
+        <button id="save-current-tab" 
+                class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md transition-colors text-sm">
+          Save Current Tab
+        </button>
+        <button id="save-all-tabs" 
+                class="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md transition-colors text-sm">
+          Save All Tabs
+        </button>
+      </div>
+    </div>
+
+    <!-- Saved Tabs Section -->
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-lg font-semibold mb-2 text-gray-700">Saved Tabs</h2>
+      <div class="flex gap-2 mb-3">
+        <input type="date" id="date-filter" value="" 
+               class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <button id="refresh-tabs" 
+                class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md transition-colors">
+          Refresh
+        </button>
+      </div>
+      <div id="tabs-list" class="max-h-[300px] overflow-y-auto">
+        <!-- Saved tabs will be displayed here -->
+        <div class="text-center text-gray-500 py-4">No saved tabs found</div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
