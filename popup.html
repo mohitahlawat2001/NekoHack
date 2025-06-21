@@ -6,9 +6,63 @@
   <title>Tab Saver Pro</title>
   <!-- Local Tailwind CSS file -->
   <link rel="stylesheet" href="tailwind.min.css">
+  <style>
+    /* Force fixed width and prevent overflow */
+    body {
+      width: 400px !important;
+      min-width: 400px !important;
+      max-width: 400px !important;
+      overflow-x: hidden !important;
+    }
+    
+    .tab-content {
+      width: 220px !important;
+      min-width: 220px !important;
+      max-width: 220px !important;
+    }
+    
+    .tab-title {
+      width: 220px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+    
+    .tab-url {
+      width: 220px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+    
+    .tab-notes {
+      width: 220px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+    
+    .tab-actions {
+      width: 110px !important;
+      min-width: 110px !important;
+      flex-shrink: 0 !important;
+    }
+    
+    .group-header {
+      width: 100% !important;
+      max-width: 368px !important; /* 400px - 32px padding */
+    }
+    
+    .group-title {
+      max-width: 200px !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800 w-[400px] m-0 p-0 font-sans">
-  <div class="p-4">
+<body class="bg-gray-100 text-gray-800 m-0 p-0 font-sans">
+  <div class="p-4" style="width: 400px;">
     <h1 class="text-center text-xl font-bold text-gray-700 mb-4">Tab Saver Pro</h1>
     
     <!-- MongoDB Connection Section -->
@@ -16,9 +70,11 @@
       <h2 class="text-lg font-semibold mb-2 text-gray-700">MongoDB Connection</h2>
       <div class="flex mb-2">
         <input type="text" id="mongodb-uri" placeholder="MongoDB Connection URI" 
-               class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+               class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+               style="max-width: 260px;">
         <button id="save-connection" 
-                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-r-md transition-colors">
+                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-r-md transition-colors text-sm"
+                style="min-width: 60px;">
           Save
         </button>
       </div>
@@ -33,25 +89,27 @@
       <div class="flex gap-4 mb-3">
         <label class="flex items-center">
           <input type="radio" name="group-method" value="new" id="new-group-radio" class="mr-2" checked>
-          <span class="text-sm">Create New Group</span>
+          <span class="text-sm">Create New</span>
         </label>
         <label class="flex items-center">
           <input type="radio" name="group-method" value="existing" id="existing-group-radio" class="mr-2">
-          <span class="text-sm">Use Existing Group</span>
+          <span class="text-sm">Use Existing</span>
         </label>
       </div>
 
       <!-- New group input -->
       <div id="new-group-section" class="mb-3">
         <input type="text" id="new-group-name" placeholder="Enter new group name" 
-               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+               style="max-width: 320px;">
         <div class="text-xs text-gray-500 mt-1">Default: 2025-06-21 (Today's date)</div>
       </div>
 
       <!-- Existing group selection -->
       <div id="existing-group-section" class="mb-3 hidden">
         <select id="existing-groups-select" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                style="max-width: 320px;">
           <option value="">Select an existing group</option>
         </select>
         <div class="text-xs text-gray-500 mt-1">Choose from previously created groups</div>
@@ -62,14 +120,14 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
         <textarea id="tab-notes" placeholder="Add notes for this tab/group..." 
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  rows="2"></textarea>
+                  rows="2" style="max-width: 320px; resize: none;"></textarea>
         <div class="text-xs text-gray-500 mt-1">These notes will be saved with your tabs</div>
       </div>
 
       <!-- Current selected group display -->
       <div class="bg-blue-50 border border-blue-200 rounded-md p-2">
         <div class="text-xs text-blue-600 font-medium">Selected Group:</div>
-        <div id="current-group-display" class="text-sm font-semibold text-blue-800">2025-06-21</div>
+        <div id="current-group-display" class="text-sm font-semibold text-blue-800 truncate" style="max-width: 300px;">2025-06-21</div>
       </div>
     </div>
 
@@ -78,11 +136,13 @@
       <h2 class="text-lg font-semibold mb-2 text-gray-700">Tab Management</h2>
       <div class="flex gap-2">
         <button id="save-current-tab" 
-                class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md transition-colors text-sm">
+                class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md transition-colors text-sm"
+                style="max-width: 155px;">
           Save Current Tab
         </button>
         <button id="save-all-tabs" 
-                class="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md transition-colors text-sm">
+                class="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md transition-colors text-sm"
+                style="max-width: 155px;">
           Save All Tabs
         </button>
       </div>
@@ -93,17 +153,20 @@
       <h2 class="text-lg font-semibold mb-2 text-gray-700">Saved Tabs</h2>
       <div class="flex gap-2 mb-3">
         <select id="group-filter" 
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                style="max-width: 120px;">
           <option value="">All groups</option>
         </select>
         <input type="date" id="date-filter" value="2025-06-21" 
-               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+               style="max-width: 130px;">
         <button id="refresh-tabs" 
-                class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md transition-colors">
+                class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md transition-colors text-sm"
+                style="min-width: 70px;">
           Refresh
         </button>
       </div>
-      <div id="tabs-list" class="max-h-[300px] overflow-y-auto">
+      <div id="tabs-list" class="max-h-[300px] overflow-y-auto" style="width: 320px; max-width: 320px;">
         <!-- Saved tabs will be displayed here -->
         <div class="text-center text-gray-500 py-4">No saved tabs found</div>
       </div>
