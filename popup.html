@@ -3,172 +3,605 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tab Saver Pro</title>
+  <title>NekoHack</title>
   <!-- Local Tailwind CSS file -->
   <link rel="stylesheet" href="tailwind.min.css">
+  <!-- Local FontAwesome CSS file -->
+  <link rel="stylesheet" href="fontawesome/css/all.min.css">
   <style>
-    /* Force fixed width and prevent overflow */
+    /* Dark theme color scheme */
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-yellow: #f59e0b;
+      --border-color: #475569;
+      --hover-bg: #475569;
+    }
+
+    /* Increased fixed width and prevent overflow */
     body {
-      width: 400px !important;
-      min-width: 400px !important;
-      max-width: 400px !important;
+      width: 520px !important;
+      min-width: 520px !important;
+      max-width: 520px !important;
       overflow-x: hidden !important;
+      background-color: var(--bg-primary) !important;
+      color: var(--text-primary) !important;
+    }
+    
+    .tab-item {
+      width: 440px !important;
+      max-width: 440px !important;
+      min-width: 440px !important;
+      display: flex !important;
+      align-items: center !important;
+      padding: 10px !important;
+      box-sizing: border-box !important;
     }
     
     .tab-content {
-      width: 220px !important;
+      width: 270px !important;
       min-width: 220px !important;
-      max-width: 220px !important;
+      max-width: 320px !important;
+      flex-shrink: 0 !important;
+      overflow: hidden !important;
     }
     
     .tab-title {
-      width: 220px !important;
+      width: 320px !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
+      font-size: 14px !important;
+      line-height: 1.3 !important;
+      font-weight: 500 !important;
+      color: var(--text-primary) !important;
     }
     
     .tab-url {
-      width: 220px !important;
+      width: 320px !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
+      font-size: 12px !important;
+      line-height: 1.3 !important;
+      color: var(--text-secondary) !important;
     }
     
     .tab-notes {
-      width: 220px !important;
+      width: 320px !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
+      font-size: 12px !important;
+      line-height: 1.3 !important;
+      color: var(--accent-green) !important;
     }
     
     .tab-actions {
       width: 110px !important;
       min-width: 110px !important;
+      max-width: 110px !important;
       flex-shrink: 0 !important;
+      display: flex !important;
+      gap: 6px !important;
+      justify-content: flex-end !important;
+      margin-left: 10px !important;
+    }
+    
+    .tab-actions button {
+      padding: 6px 10px !important;
+      font-size: 11px !important;
+      border-radius: 4px !important;
+      border: none !important;
+      cursor: pointer !important;
+      transition: all 0.2s !important;
+      width: 50px !important;
+      text-align: center !important;
+      font-weight: 500 !important;
+    }
+    
+    .group-container {
+      width: 440px !important;
+      max-width: 440px !important;
+      overflow: hidden !important;
+      margin-bottom: 16px !important;
     }
     
     .group-header {
       width: 100% !important;
-      max-width: 368px !important; /* 400px - 32px padding */
+      max-width: 440px !important;
+      box-sizing: border-box !important;
+      background: linear-gradient(135deg, var(--bg-tertiary), #475569) !important;
+      border-bottom: 1px solid var(--border-color) !important;
     }
     
     .group-title {
-      max-width: 200px !important;
+      max-width: 220px !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       white-space: nowrap !important;
+      color: var(--text-primary) !important;
+    }
+    
+    .notification {
+      position: fixed !important;
+      top: 10px !important;
+      right: 10px !important;
+      z-index: 9999 !important;
+      padding: 10px 15px !important;
+      border-radius: 6px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+      transition: all 0.3s ease !important;
+      max-width: 300px !important;
+    }
+    
+    .main-container {
+      width: 518px !important;
+      max-width: 518px !important;
+    }
+    
+    .input-field {
+      max-width: 420px !important;
+      background-color: var(--bg-tertiary) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-primary) !important;
+    }
+    
+    .input-field:focus {
+      border-color: var(--accent-blue) !important;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+    
+    .input-field::placeholder {
+      color: var(--text-muted) !important;
+    }
+
+    .button-group {
+      max-width: 420px !important;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .password-toggle:hover {
+      color: var(--text-secondary) !important;
+    }
+
+    .password-input-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .security-icon {
+      color: var(--accent-green);
+      margin-right: 8px;
+    }
+
+    .encryption-status {
+      display: flex;
+      align-items: center;
+      font-size: 11px;
+      margin-top: 5px;
+      color: var(--text-secondary) !important;
+    }
+
+    .current-key-display {
+      background: var(--bg-tertiary) !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-top: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      word-break: break-all;
+      position: relative;
+    }
+
+    .key-actions {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .key-action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      transition: background-color 0.2s;
+      color: var(--text-muted);
+    }
+
+    .key-action-btn:hover {
+      background-color: var(--hover-bg) !important;
+      color: var(--text-primary) !important;
+    }
+
+    .masked-key {
+      color: var(--text-muted);
+      letter-spacing: 2px;
+    }
+
+    .visible-key {
+      color: var(--text-primary) !important;
+      font-weight: 500;
+    }
+
+    .fa-icon {
+      margin-right: 6px;
+    }
+
+    .title-icon {
+      margin-right: 8px;
+      filter: brightness(1.2);
+    }
+
+    .section-icon {
+      margin-right: 8px;
+      color: var(--text-secondary);
+    }
+
+    .status-icon {
+      margin-right: 6px;
+    }
+
+    /* Dark theme card styles */
+    .card {
+      background-color: var(--bg-secondary) !important;
+      border: 1px solid var(--border-color) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .card h2 {
+      color: var(--text-primary) !important;
+    }
+
+    /* Button styles */
+    .btn-primary {
+      background-color: var(--accent-blue) !important;
+      border-color: var(--accent-blue) !important;
+    }
+
+    .btn-primary:hover {
+      background-color: #2563eb !important;
+      border-color: #2563eb !important;
+    }
+
+    .btn-success {
+      background-color: var(--accent-green) !important;
+      border-color: var(--accent-green) !important;
+    }
+
+    .btn-success:hover {
+      background-color: #059669 !important;
+      border-color: #059669 !important;
+    }
+
+    .btn-danger {
+      background-color: var(--accent-red) !important;
+      border-color: var(--accent-red) !important;
+    }
+
+    .btn-danger:hover {
+      background-color: #dc2626 !important;
+      border-color: #dc2626 !important;
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-tertiary) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-primary) !important;
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--hover-bg) !important;
+      border-color: var(--text-muted) !important;
+    }
+
+    /* Special styling for different sections */
+    .security-section {
+      border-left: 4px solid var(--accent-green) !important;
+    }
+
+    .group-display {
+      background-color: var(--bg-tertiary) !important;
+      border-color: var(--accent-blue) !important;
+      color: var(--text-primary) !important;
+    }
+
+    .group-display-text {
+      color: var(--accent-blue) !important;
+    }
+
+    .warning-box {
+      background-color: rgba(245, 158, 11, 0.1) !important;
+      border-left-color: var(--accent-yellow) !important;
+      color: var(--text-secondary) !important;
+    }
+
+    .warning-icon {
+      color: var(--accent-yellow) !important;
+    }
+
+    /* Tab item hover effects */
+    .tab-item:hover {
+      background-color: var(--hover-bg) !important;
+    }
+
+    .tab-item.error-item {
+      background-color: rgba(239, 68, 68, 0.1) !important;
+      border-left-color: var(--accent-red) !important;
+    }
+
+    /* Success/error status colors */
+    .text-success {
+      color: var(--accent-green) !important;
+    }
+
+    .text-error {
+      color: var(--accent-red) !important;
+    }
+
+    .text-warning {
+      color: var(--accent-yellow) !important;
+    }
+
+    .text-info {
+      color: var(--accent-blue) !important;
+    }
+
+    /* Scrollbar styling for dark theme */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Radio button styling */
+    input[type="radio"] {
+      accent-color: var(--accent-blue);
+    }
+
+    /* Select dropdown styling */
+    select {
+      background-color: var(--bg-tertiary) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-primary) !important;
+    }
+
+    select option {
+      background-color: var(--bg-secondary) !important;
+      color: var(--text-primary) !important;
+    }
+
+    /* Date input styling */
+    input[type="date"] {
+      background-color: var(--bg-tertiary) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-primary) !important;
+      color-scheme: dark;
     }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-800 m-0 p-0 font-sans">
-  <div class="p-4" style="width: 400px;">
-    <h1 class="text-center text-xl font-bold text-gray-700 mb-4">Tab Saver Pro</h1>
+<body class="m-0 p-0 font-sans">
+  <div class="p-4 main-container">
+    <h1 class="text-center text-xl font-bold mb-4" style="color: var(--text-primary);">
+      <img src="icons/icon128.png" alt="NekoHack Icon" class="inline-block align-middle title-icon" style="width: 28px; height: 28px; vertical-align: middle;"> NekoHack - Secure Tab Manager
+    </h1>
     
     <!-- MongoDB Connection Section -->
-    <div class="bg-white rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-2 text-gray-700">MongoDB Connection</h2>
+    <div class="card rounded-lg shadow p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-3">
+        <i class="fas fa-database section-icon"></i>MongoDB Connection
+      </h2>
       <div class="flex mb-2">
         <input type="text" id="mongodb-uri" placeholder="MongoDB Connection URI" 
-               class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-               style="max-width: 260px;">
+               class="flex-1 px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
         <button id="save-connection" 
-                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-r-md transition-colors text-sm"
-                style="min-width: 60px;">
-          Save
+                class="btn-primary text-white px-4 py-2 rounded-r-md transition-colors text-sm font-medium"
+                style="min-width: 70px;">
+          <i class="fas fa-save fa-icon"></i>Save
         </button>
       </div>
-      <div id="connection-status" class="text-sm"></div>
+      <div id="connection-status" class="text-sm mt-1"></div>
+    </div>
+
+    <!-- Security Section -->
+    <div class="card security-section rounded-lg shadow p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-3">
+        <i class="fas fa-lock section-icon"></i>Data Encryption
+      </h2>
+      
+      <!-- Secret Key Input -->
+      <div class="password-input-container mb-2">
+        <input type="password" id="secret-key" placeholder="Enter secret key for encryption" 
+               class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm input-field">
+        <i class="fas fa-eye password-toggle" id="toggle-key-visibility" title="Show/Hide Key"></i>
+      </div>
+      
+      <div class="flex gap-2 mb-3">
+        <button id="save-secret-key" 
+                class="btn-success text-white px-4 py-2 rounded-md transition-colors text-sm font-medium flex-1">
+          <i class="fas fa-key fa-icon"></i>Save Secret Key
+        </button>
+        <button id="update-secret-key" 
+                class="btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium hidden">
+          <i class="fas fa-edit fa-icon"></i>Update Key
+        </button>
+        <button id="clear-secret-key" 
+                class="btn-danger text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
+          <i class="fas fa-trash fa-icon"></i>Clear
+        </button>
+      </div>
+
+      <!-- Current Key Display -->
+      <div id="current-key-section" class="hidden">
+        <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">
+          <i class="fas fa-key fa-icon"></i>Current Secret Key:
+        </label>
+        <div class="current-key-display">
+          <div class="key-actions">
+            <button class="key-action-btn" id="toggle-current-key-visibility" title="Show/Hide Key">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="key-action-btn" id="copy-current-key" title="Copy Key">
+              <i class="fas fa-copy"></i>
+            </button>
+          </div>
+          <div id="current-key-display" class="masked-key pr-12">••••••••••••••••</div>
+        </div>
+      </div>
+      
+      <div class="encryption-status mt-3">
+        <i class="fas fa-shield-alt security-icon"></i>
+        <div id="encryption-status">No secret key set - data will be stored unencrypted</div>
+      </div>
+      
+      <div class="text-xs mt-2 warning-box p-2 rounded border-l-2">
+        <i class="fas fa-exclamation-triangle status-icon warning-icon"></i>
+        <strong>Important:</strong> Keep your secret key safe! Without it, you cannot decrypt your saved data. Use a strong, memorable key.
+      </div>
     </div>
 
     <!-- Group Selection Section -->
-    <div class="bg-white rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-2 text-gray-700">Select or Create Group</h2>
+    <div class="card rounded-lg shadow p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-3">
+        <i class="fas fa-layer-group section-icon"></i>Select or Create Group
+      </h2>
       
       <!-- Radio buttons for selection method -->
-      <div class="flex gap-4 mb-3">
+      <div class="flex gap-6 mb-3">
         <label class="flex items-center">
           <input type="radio" name="group-method" value="new" id="new-group-radio" class="mr-2" checked>
-          <span class="text-sm">Create New</span>
+          <span class="text-sm font-medium" style="color: var(--text-primary);">
+            <i class="fas fa-plus fa-icon"></i>Create New Group
+          </span>
         </label>
         <label class="flex items-center">
           <input type="radio" name="group-method" value="existing" id="existing-group-radio" class="mr-2">
-          <span class="text-sm">Use Existing</span>
+          <span class="text-sm font-medium" style="color: var(--text-primary);">
+            <i class="fas fa-list fa-icon"></i>Use Existing Group
+          </span>
         </label>
       </div>
 
       <!-- New group input -->
       <div id="new-group-section" class="mb-3">
         <input type="text" id="new-group-name" placeholder="Enter new group name" 
-               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-               style="max-width: 320px;">
-        <div class="text-xs text-gray-500 mt-1">Default: 2025-06-21 (Today's date)</div>
+               class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+        <div class="text-xs mt-1" style="color: var(--text-muted);">
+          <i class="fas fa-info-circle fa-icon"></i>Default: 2025-06-22 (Today's date)
+        </div>
       </div>
 
       <!-- Existing group selection -->
       <div id="existing-group-section" class="mb-3 hidden">
         <select id="existing-groups-select" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                style="max-width: 320px;">
+                class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
           <option value="">Select an existing group</option>
         </select>
-        <div class="text-xs text-gray-500 mt-1">Choose from previously created groups</div>
+        <div class="text-xs mt-1" style="color: var(--text-muted);">
+          <i class="fas fa-info-circle fa-icon"></i>Choose from previously created groups
+        </div>
       </div>
 
       <!-- Notes Section -->
       <div class="mb-3">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+        <label class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
+          <i class="fas fa-sticky-note fa-icon"></i>Notes (Optional)
+        </label>
         <textarea id="tab-notes" placeholder="Add notes for this tab/group..." 
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  rows="2" style="max-width: 320px; resize: none;"></textarea>
-        <div class="text-xs text-gray-500 mt-1">These notes will be saved with your tabs</div>
+                  class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field"
+                  rows="2" style="resize: none;"></textarea>
+        <div class="text-xs mt-1" style="color: var(--text-muted);">
+          <i class="fas fa-info-circle fa-icon"></i>These notes will be saved with your tabs
+        </div>
       </div>
 
       <!-- Current selected group display -->
-      <div class="bg-blue-50 border border-blue-200 rounded-md p-2">
-        <div class="text-xs text-blue-600 font-medium">Selected Group:</div>
-        <div id="current-group-display" class="text-sm font-semibold text-blue-800 truncate" style="max-width: 300px;">2025-06-21</div>
+      <div class="group-display border rounded-md p-3">
+        <div class="text-xs font-medium mb-1 group-display-text">
+          <i class="fas fa-tag fa-icon"></i>Selected Group:
+        </div>
+        <div id="current-group-display" class="text-sm font-semibold truncate" style="max-width: 400px; color: var(--text-primary);">2025-06-22</div>
       </div>
     </div>
 
     <!-- Tab Management Section -->
-    <div class="bg-white rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-2 text-gray-700">Tab Management</h2>
-      <div class="flex gap-2">
+    <div class="card rounded-lg shadow p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-3">
+        <i class="fas fa-cogs section-icon"></i>Tab Management
+      </h2>
+      <div class="flex gap-3 button-group">
         <button id="save-current-tab" 
-                class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md transition-colors text-sm"
-                style="max-width: 155px;">
-          Save Current Tab
+                class="flex-1 btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
+          <i class="fas fa-bookmark fa-icon"></i>Save Current Tab
         </button>
         <button id="save-all-tabs" 
-                class="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md transition-colors text-sm"
-                style="max-width: 155px;">
-          Save All Tabs
+                class="flex-1 btn-success text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
+          <i class="fas fa-save fa-icon"></i>Save All Tabs
         </button>
       </div>
     </div>
 
     <!-- Saved Tabs Section -->
-    <div class="bg-white rounded-lg shadow p-4">
-      <h2 class="text-lg font-semibold mb-2 text-gray-700">Saved Tabs</h2>
-      <div class="flex gap-2 mb-3">
+    <div class="card rounded-lg shadow p-4">
+      <h2 class="text-lg font-semibold mb-3">
+        <i class="fas fa-history section-icon"></i>Saved Tabs
+      </h2>
+      <div class="flex gap-3 mb-4">
         <select id="group-filter" 
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                style="max-width: 120px;">
+                class="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                style="max-width: 150px;">
           <option value="">All groups</option>
         </select>
-        <input type="date" id="date-filter" value="2025-06-21" 
-               class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-               style="max-width: 130px;">
+        <input type="date" id="date-filter" value="2025-06-22" 
+               class="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+               style="max-width: 150px;">
         <button id="refresh-tabs" 
-                class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md transition-colors text-sm"
-                style="min-width: 70px;">
-          Refresh
+                class="btn-secondary px-4 py-2 rounded-md transition-colors text-sm font-medium"
+                style="min-width: 80px;">
+          <i class="fas fa-sync-alt fa-icon"></i>Refresh
         </button>
       </div>
-      <div id="tabs-list" class="max-h-[300px] overflow-y-auto" style="width: 320px; max-width: 320px;">
+      <div id="tabs-list" class="max-h-[350px] overflow-y-auto" style="width: 440px; max-width: 440px;">
         <!-- Saved tabs will be displayed here -->
-        <div class="text-center text-gray-500 py-4">No saved tabs found</div>
+        <div class="text-center py-6" style="color: var(--text-muted);">
+          <i class="fas fa-inbox fa-2x mb-2"></i>
+          <div>No saved tabs found</div>
+        </div>
       </div>
     </div>
   </div>
