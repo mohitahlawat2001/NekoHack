@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Tab Saver Pro",
+  "name": "NekoHack - Secure Tab Manager",
   "version": "1.0",
-  "description": "Save and restore tabs across different browsers using MongoDB",
+  "description": "Save and restore tabs across different browsers using your MongoDB",
   "permissions": ["tabs", "storage", "activeTab"],
   "host_permissions": ["<all_urls>"],
   "background": {
