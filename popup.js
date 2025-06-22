@@ -1,3 +1,7 @@
+// Store the actual secret key temporarily for display
+let currentSecretKey = '';
+let isCurrentKeyVisible = false;
+
 document.addEventListener('DOMContentLoaded', () => {
   // Set current date as default
   const today = '2025-06-22';
@@ -9,17 +13,21 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCurrentGroupDisplay();
 
   // Load stored data from storage
-  chrome.storage.local.get(['mongodbUri', 'hasSecretKey'], (result) => {
+  chrome.storage.local.get(['mongodbUri', 'hasSecretKey', 'secretKeyDisplay'], (result) => {
     if (result.mongodbUri) {
       document.getElementById('mongodb-uri').value = result.mongodbUri;
       updateConnectionStatus('Connection saved', 'success');
     }
     
-    if (result.hasSecretKey) {
+    if (result.hasSecretKey && result.secretKeyDisplay) {
+      currentSecretKey = result.secretKeyDisplay;
+      showCurrentKeySection();
+      updateCurrentKeyDisplay();
       updateEncryptionStatus('Secret key is set - data will be encrypted', 'success');
       loadExistingGroups();
       loadSavedTabs();
     } else {
+      hideCurrentKeySection();
       updateEncryptionStatus('No secret key set - data will be stored unencrypted', 'warning');
     }
   });
@@ -27,8 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event listeners
   document.getElementById('save-connection').addEventListener('click', handleSaveConnection);
   document.getElementById('save-secret-key').addEventListener('click', handleSaveSecretKey);
+  document.getElementById('update-secret-key').addEventListener('click', handleUpdateSecretKey);
   document.getElementById('clear-secret-key').addEventListener('click', handleClearSecretKey);
   document.getElementById('toggle-key-visibility').addEventListener('click', toggleKeyVisibility);
+  document.getElementById('toggle-current-key-visibility').addEventListener('click', toggleCurrentKeyVisibility);
+  document.getElementById('copy-current-key').addEventListener('click', copyCurrentKey);
   document.getElementById('save-current-tab').addEventListener('click', handleSaveCurrentTab);
   document.getElementById('save-all-tabs').addEventListener('click', handleSaveAllTabs);
   document.getElementById('refresh-tabs').addEventListener('click', handleRefreshTabs);
@@ -119,6 +130,34 @@ function getStoredSecretKey() {
   });
 }
 
+function showCurrentKeySection() {
+  document.getElementById('current-key-section').classList.remove('hidden');
+  document.getElementById('save-secret-key').classList.add('hidden');
+  document.getElementById('update-secret-key').classList.remove('hidden');
+}
+
+function hideCurrentKeySection() {
+  document.getElementById('current-key-section').classList.add('hidden');
+  document.getElementById('save-secret-key').classList.remove('hidden');
+  document.getElementById('update-secret-key').classList.add('hidden');
+}
+
+function updateCurrentKeyDisplay() {
+  const currentKeyEl = document.getElementById('current-key-display');
+  
+  if (isCurrentKeyVisible && currentSecretKey) {
+    currentKeyEl.textContent = currentSecretKey;
+    currentKeyEl.className = 'visible-key pr-12';
+    document.getElementById('toggle-current-key-visibility').textContent = '🙈';
+    document.getElementById('toggle-current-key-visibility').title = 'Hide Key';
+  } else if (currentSecretKey) {
+    currentKeyEl.textContent = '•'.repeat(currentSecretKey.length);
+    currentKeyEl.className = 'masked-key pr-12';
+    document.getElementById('toggle-current-key-visibility').textContent = '👁️';
+    document.getElementById('toggle-current-key-visibility').title = 'Show Key';
+  }
+}
+
 function toggleKeyVisibility() {
   const keyInput = document.getElementById('secret-key');
   const toggleIcon = document.getElementById('toggle-key-visibility');
@@ -131,6 +170,28 @@ function toggleKeyVisibility() {
     keyInput.type = 'password';
     toggleIcon.textContent = '👁️';
     toggleIcon.title = 'Show secret key';
+  }
+}
+
+function toggleCurrentKeyVisibility() {
+  isCurrentKeyVisible = !isCurrentKeyVisible;
+  updateCurrentKeyDisplay();
+}
+
+function copyCurrentKey() {
+  if (currentSecretKey) {
+    navigator.clipboard.writeText(currentSecretKey).then(() => {
+      showNotification('Secret key copied to clipboard!', 'success');
+    }).catch(() => {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = currentSecretKey;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      showNotification('Secret key copied to clipboard!', 'success');
+    });
   }
 }
 
@@ -147,23 +208,63 @@ function handleSaveSecretKey() {
     return;
   }
   
-  // Hash the secret key before storing (for security)
+  // Store both hashed and display versions
   const hashedKey = btoa(secretKey + 'tab-saver-salt'); // Simple hash with salt
+  currentSecretKey = secretKey;
   
   chrome.storage.local.set({ 
     secretKey: hashedKey,
+    secretKeyDisplay: secretKey, // Store for display purposes
     hasSecretKey: true 
   }, () => {
+    showCurrentKeySection();
+    updateCurrentKeyDisplay();
     updateEncryptionStatus('Secret key saved - data will be encrypted', 'success');
     showNotification('Secret key saved successfully!', 'success');
-    document.getElementById('secret-key').value = '';
+    
+    // Keep the key in input field for user to see
+    // document.getElementById('secret-key').value = ''; // Don't clear it
+    
+    loadExistingGroups();
+    loadSavedTabs();
+  });
+}
+
+function handleUpdateSecretKey() {
+  const secretKey = document.getElementById('secret-key').value.trim();
+  
+  if (!secretKey) {
+    showNotification('Please enter a new secret key', 'error');
+    return;
+  }
+  
+  if (secretKey.length < 8) {
+    showNotification('Secret key must be at least 8 characters long', 'error');
+    return;
+  }
+  
+  // Store both hashed and display versions
+  const hashedKey = btoa(secretKey + 'tab-saver-salt');
+  currentSecretKey = secretKey;
+  
+  chrome.storage.local.set({ 
+    secretKey: hashedKey,
+    secretKeyDisplay: secretKey,
+    hasSecretKey: true 
+  }, () => {
+    updateCurrentKeyDisplay();
+    updateEncryptionStatus('Secret key updated - data will be encrypted with new key', 'success');
+    showNotification('Secret key updated successfully!', 'success');
+    
     loadExistingGroups();
     loadSavedTabs();
   });
 }
 
 function handleClearSecretKey() {
-  chrome.storage.local.remove(['secretKey', 'hasSecretKey'], () => {
+  chrome.storage.local.remove(['secretKey', 'secretKeyDisplay', 'hasSecretKey'], () => {
+    currentSecretKey = '';
+    hideCurrentKeySection();
     updateEncryptionStatus('No secret key set - data will be stored unencrypted', 'warning');
     showNotification('Secret key cleared', 'info');
     document.getElementById('secret-key').value = '';
@@ -382,7 +483,7 @@ async function saveTab(tab, groupName, notes, callback) {
       groupName: groupName,
       notes: notes,
       date: '2025-06-22',
-      createdAt: '2025-06-22 05:25:10',
+      createdAt: '2025-06-22 05:47:45',
       createdBy: 'mohitahlawat2001'
     };
 
@@ -390,10 +491,9 @@ async function saveTab(tab, groupName, notes, callback) {
     let finalTabData = tabData;
     let isEncrypted = false;
     
-    if (result.secretKey) {
+    if (result.secretKey && currentSecretKey) {
       try {
-        const secretKey = atob(result.secretKey).replace('tab-saver-salt', '');
-        const encryptedData = await encryptData(tabData, secretKey);
+        const encryptedData = await encryptData(tabData, currentSecretKey);
         finalTabData = {
           encryptedData: encryptedData,
           isEncrypted: true,
@@ -452,7 +552,7 @@ async function saveAllTabs(tabs, groupName, notes, callback) {
       groupName: groupName,
       notes: notes,
       date: '2025-06-22',
-      createdAt: '2025-06-22 05:25:10',
+      createdAt: '2025-06-22 05:47:45',
       createdBy: 'mohitahlawat2001'
     }));
 
@@ -460,13 +560,12 @@ async function saveAllTabs(tabs, groupName, notes, callback) {
     let finalTabsData = tabsData;
     let isEncrypted = false;
     
-    if (result.secretKey) {
+    if (result.secretKey && currentSecretKey) {
       try {
-        const secretKey = atob(result.secretKey).replace('tab-saver-salt', '');
         finalTabsData = [];
         
         for (const tabData of tabsData) {
-          const encryptedData = await encryptData(tabData, secretKey);
+          const encryptedData = await encryptData(tabData, currentSecretKey);
           finalTabsData.push({
             encryptedData: encryptedData,
             isEncrypted: true,
@@ -589,15 +688,14 @@ async function loadSavedTabs() {
           let tabs = response.tabs;
           
           // Decrypt encrypted tabs if secret key is available
-          if (result.secretKey) {
+          if (result.secretKey && currentSecretKey) {
             try {
-              const secretKey = atob(result.secretKey).replace('tab-saver-salt', '');
               const decryptedTabs = [];
               
               for (const tab of tabs) {
                 if (tab.isEncrypted && tab.encryptedData) {
                   try {
-                    const decryptedData = await decryptData(tab.encryptedData, secretKey);
+                    const decryptedData = await decryptData(tab.encryptedData, currentSecretKey);
                     // Merge decrypted data with metadata
                     decryptedTabs.push({
                       ...decryptedData,
