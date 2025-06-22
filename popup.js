@@ -8,18 +8,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('new-group-name').placeholder = `Enter new group name (default: ${today})`;
   updateCurrentGroupDisplay();
 
-  // Load MongoDB connection from storage
-  chrome.storage.local.get(['mongodbUri'], (result) => {
+  // Load stored data from storage
+  chrome.storage.local.get(['mongodbUri', 'hasSecretKey'], (result) => {
     if (result.mongodbUri) {
       document.getElementById('mongodb-uri').value = result.mongodbUri;
       updateConnectionStatus('Connection saved', 'success');
+    }
+    
+    if (result.hasSecretKey) {
+      updateEncryptionStatus('Secret key is set - data will be encrypted', 'success');
       loadExistingGroups();
       loadSavedTabs();
+    } else {
+      updateEncryptionStatus('No secret key set - data will be stored unencrypted', 'warning');
     }
   });
 
   // Event listeners
   document.getElementById('save-connection').addEventListener('click', handleSaveConnection);
+  document.getElementById('save-secret-key').addEventListener('click', handleSaveSecretKey);
+  document.getElementById('clear-secret-key').addEventListener('click', handleClearSecretKey);
+  document.getElementById('toggle-key-visibility').addEventListener('click', toggleKeyVisibility);
   document.getElementById('save-current-tab').addEventListener('click', handleSaveCurrentTab);
   document.getElementById('save-all-tabs').addEventListener('click', handleSaveAllTabs);
   document.getElementById('refresh-tabs').addEventListener('click', handleRefreshTabs);
@@ -35,6 +44,146 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('new-group-radio').addEventListener('change', handleGroupMethodChange);
   document.getElementById('existing-group-radio').addEventListener('change', handleGroupMethodChange);
 });
+
+// Encryption Functions
+async function encryptData(data, secretKey) {
+  try {
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(JSON.stringify(data));
+    const keyBuffer = encoder.encode(secretKey.padEnd(32, '0').substring(0, 32)); // Ensure 32 bytes
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyBuffer,
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    );
+    
+    const iv = crypto.getRandomValues(new Uint8Array(12)); // 12 bytes IV for AES-GCM
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv },
+      cryptoKey,
+      dataBuffer
+    );
+    
+    // Combine IV and encrypted data
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    
+    return btoa(String.fromCharCode(...combined));
+  } catch (error) {
+    console.error('Encryption failed:', error);
+    throw new Error('Failed to encrypt data');
+  }
+}
+
+async function decryptData(encryptedData, secretKey) {
+  try {
+    const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
+    const combined = new Uint8Array(atob(encryptedData).split('').map(c => c.charCodeAt(0)));
+    
+    const iv = combined.slice(0, 12);
+    const encrypted = combined.slice(12);
+    
+    const keyBuffer = encoder.encode(secretKey.padEnd(32, '0').substring(0, 32));
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyBuffer,
+      { name: 'AES-GCM' },
+      false,
+      ['decrypt']
+    );
+    
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: iv },
+      cryptoKey,
+      encrypted
+    );
+    
+    return JSON.parse(decoder.decode(decrypted));
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    throw new Error('Failed to decrypt data - wrong secret key or corrupted data');
+  }
+}
+
+function getStoredSecretKey() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['secretKey'], (result) => {
+      resolve(result.secretKey || null);
+    });
+  });
+}
+
+function toggleKeyVisibility() {
+  const keyInput = document.getElementById('secret-key');
+  const toggleIcon = document.getElementById('toggle-key-visibility');
+  
+  if (keyInput.type === 'password') {
+    keyInput.type = 'text';
+    toggleIcon.textContent = '🙈';
+    toggleIcon.title = 'Hide secret key';
+  } else {
+    keyInput.type = 'password';
+    toggleIcon.textContent = '👁️';
+    toggleIcon.title = 'Show secret key';
+  }
+}
+
+function handleSaveSecretKey() {
+  const secretKey = document.getElementById('secret-key').value.trim();
+  
+  if (!secretKey) {
+    showNotification('Please enter a secret key', 'error');
+    return;
+  }
+  
+  if (secretKey.length < 8) {
+    showNotification('Secret key must be at least 8 characters long', 'error');
+    return;
+  }
+  
+  // Hash the secret key before storing (for security)
+  const hashedKey = btoa(secretKey + 'tab-saver-salt'); // Simple hash with salt
+  
+  chrome.storage.local.set({ 
+    secretKey: hashedKey,
+    hasSecretKey: true 
+  }, () => {
+    updateEncryptionStatus('Secret key saved - data will be encrypted', 'success');
+    showNotification('Secret key saved successfully!', 'success');
+    document.getElementById('secret-key').value = '';
+    loadExistingGroups();
+    loadSavedTabs();
+  });
+}
+
+function handleClearSecretKey() {
+  chrome.storage.local.remove(['secretKey', 'hasSecretKey'], () => {
+    updateEncryptionStatus('No secret key set - data will be stored unencrypted', 'warning');
+    showNotification('Secret key cleared', 'info');
+    document.getElementById('secret-key').value = '';
+    loadExistingGroups();
+    loadSavedTabs();
+  });
+}
+
+function updateEncryptionStatus(message, type) {
+  const statusEl = document.getElementById('encryption-status');
+  statusEl.textContent = message;
+  
+  if (type === 'success') {
+    statusEl.className = 'text-green-600 font-medium';
+  } else if (type === 'warning') {
+    statusEl.className = 'text-yellow-600 font-medium';
+  } else {
+    statusEl.className = 'text-gray-500';
+  }
+}
 
 function handleGroupMethodChange() {
   const isNewGroup = document.getElementById('new-group-radio').checked;
@@ -91,6 +240,7 @@ function showNotification(message, type = 'info') {
   notification.className = `notification ${
     type === 'success' ? 'bg-green-500 text-white' :
     type === 'error' ? 'bg-red-500 text-white' :
+    type === 'warning' ? 'bg-yellow-500 text-white' :
     'bg-blue-500 text-white'
   }`;
   notification.textContent = message;
@@ -98,7 +248,7 @@ function showNotification(message, type = 'info') {
   // Add to document
   document.body.appendChild(notification);
   
-  // Auto remove after 4 seconds (increased time)
+  // Auto remove after 4 seconds
   setTimeout(() => {
     notification.style.opacity = '0';
     setTimeout(() => {
@@ -213,34 +363,63 @@ function handleRefreshTabs() {
   loadSavedTabs();
 }
 
-function saveTab(tab, groupName, notes, callback) {
-  chrome.storage.local.get(['mongodbUri'], (result) => {
+async function saveTab(tab, groupName, notes, callback) {
+  try {
+    const result = await new Promise(resolve => 
+      chrome.storage.local.get(['mongodbUri', 'secretKey'], resolve)
+    );
+    
     if (!result.mongodbUri) {
       showNotification('Please set up MongoDB connection first', 'error');
       if (callback) callback();
       return;
     }
 
-    const tabData = {
+    let tabData = {
       title: tab.title,
       url: tab.url,
       favicon: tab.favIconUrl || '',
       groupName: groupName,
       notes: notes,
       date: '2025-06-22',
-      createdAt: '2025-06-22 05:02:19',
+      createdAt: '2025-06-22 05:25:10',
       createdBy: 'mohitahlawat2001'
     };
 
+    // Encrypt data if secret key is available
+    let finalTabData = tabData;
+    let isEncrypted = false;
+    
+    if (result.secretKey) {
+      try {
+        const secretKey = atob(result.secretKey).replace('tab-saver-salt', '');
+        const encryptedData = await encryptData(tabData, secretKey);
+        finalTabData = {
+          encryptedData: encryptedData,
+          isEncrypted: true,
+          groupName: groupName, // Keep groupName unencrypted for filtering
+          date: tabData.date,
+          createdAt: tabData.createdAt,
+          createdBy: tabData.createdBy
+        };
+        isEncrypted = true;
+      } catch (error) {
+        showNotification('Encryption failed: ' + error.message, 'error');
+        if (callback) callback();
+        return;
+      }
+    }
+
     chrome.runtime.sendMessage(
-      { action: 'saveTab', mongodbUri: result.mongodbUri, tabData },
+      { action: 'saveTab', mongodbUri: result.mongodbUri, tabData: finalTabData },
       (response) => {
         if (response && response.success) {
           loadExistingGroups();
           loadSavedTabs();
           // Clear notes after successful save
           document.getElementById('tab-notes').value = '';
-          showNotification(`Tab saved to group: "${groupName}"`, 'success');
+          const encryptionMsg = isEncrypted ? ' (encrypted)' : ' (unencrypted)';
+          showNotification(`Tab saved to group: "${groupName}"${encryptionMsg}`, 'success');
         } else {
           const errorMsg = `Failed to save tab: ${response ? response.error : 'Unknown error'}`;
           showNotification(errorMsg, 'error');
@@ -248,37 +427,73 @@ function saveTab(tab, groupName, notes, callback) {
         if (callback) callback();
       }
     );
-  });
+  } catch (error) {
+    showNotification('Error saving tab: ' + error.message, 'error');
+    if (callback) callback();
+  }
 }
 
-function saveAllTabs(tabs, groupName, notes, callback) {
-  chrome.storage.local.get(['mongodbUri'], (result) => {
+async function saveAllTabs(tabs, groupName, notes, callback) {
+  try {
+    const result = await new Promise(resolve => 
+      chrome.storage.local.get(['mongodbUri', 'secretKey'], resolve)
+    );
+    
     if (!result.mongodbUri) {
       showNotification('Please set up MongoDB connection first', 'error');
       if (callback) callback();
       return;
     }
 
-    const tabsData = tabs.map(tab => ({
+    let tabsData = tabs.map(tab => ({
       title: tab.title,
       url: tab.url,
       favicon: tab.favIconUrl || '',
       groupName: groupName,
       notes: notes,
       date: '2025-06-22',
-      createdAt: '2025-06-22 05:02:19',
+      createdAt: '2025-06-22 05:25:10',
       createdBy: 'mohitahlawat2001'
     }));
 
+    // Encrypt data if secret key is available
+    let finalTabsData = tabsData;
+    let isEncrypted = false;
+    
+    if (result.secretKey) {
+      try {
+        const secretKey = atob(result.secretKey).replace('tab-saver-salt', '');
+        finalTabsData = [];
+        
+        for (const tabData of tabsData) {
+          const encryptedData = await encryptData(tabData, secretKey);
+          finalTabsData.push({
+            encryptedData: encryptedData,
+            isEncrypted: true,
+            groupName: groupName,
+            date: tabData.date,
+            createdAt: tabData.createdAt,
+            createdBy: tabData.createdBy
+          });
+        }
+        isEncrypted = true;
+      } catch (error) {
+        showNotification('Encryption failed: ' + error.message, 'error');
+        if (callback) callback();
+        return;
+      }
+    }
+
     chrome.runtime.sendMessage(
-      { action: 'saveAllTabs', mongodbUri: result.mongodbUri, tabsData },
+      { action: 'saveAllTabs', mongodbUri: result.mongodbUri, tabsData: finalTabsData },
       (response) => {
         if (response && response.success) {
           loadExistingGroups();
           loadSavedTabs();
           // Clear notes after successful save
           document.getElementById('tab-notes').value = '';
-          showNotification(`${tabsData.length} tabs saved to group: "${groupName}"`, 'success');
+          const encryptionMsg = isEncrypted ? ' (encrypted)' : ' (unencrypted)';
+          showNotification(`${tabsData.length} tabs saved to group: "${groupName}"${encryptionMsg}`, 'success');
         } else {
           const errorMsg = `Failed to save tabs: ${response ? response.error : 'Unknown error'}`;
           showNotification(errorMsg, 'error');
@@ -286,7 +501,10 @@ function saveAllTabs(tabs, groupName, notes, callback) {
         if (callback) callback();
       }
     );
-  });
+  } catch (error) {
+    showNotification('Error saving tabs: ' + error.message, 'error');
+    if (callback) callback();
+  }
 }
 
 function loadExistingGroups() {
@@ -346,8 +564,12 @@ function populateGroupDropdowns(groups) {
   updateCurrentGroupDisplay();
 }
 
-function loadSavedTabs() {
-  chrome.storage.local.get(['mongodbUri'], (result) => {
+async function loadSavedTabs() {
+  try {
+    const result = await new Promise(resolve => 
+      chrome.storage.local.get(['mongodbUri', 'secretKey'], resolve)
+    );
+    
     if (!result.mongodbUri) {
       return;
     }
@@ -362,15 +584,64 @@ function loadSavedTabs() {
         date: dateFilter,
         groupName: groupFilter 
       },
-      (response) => {
+      async (response) => {
         if (response && response.success) {
-          displayTabs(response.tabs);
+          let tabs = response.tabs;
+          
+          // Decrypt encrypted tabs if secret key is available
+          if (result.secretKey) {
+            try {
+              const secretKey = atob(result.secretKey).replace('tab-saver-salt', '');
+              const decryptedTabs = [];
+              
+              for (const tab of tabs) {
+                if (tab.isEncrypted && tab.encryptedData) {
+                  try {
+                    const decryptedData = await decryptData(tab.encryptedData, secretKey);
+                    // Merge decrypted data with metadata
+                    decryptedTabs.push({
+                      ...decryptedData,
+                      _id: tab._id,
+                      isEncrypted: true
+                    });
+                  } catch (decryptError) {
+                    console.error('Failed to decrypt tab:', decryptError);
+                    // Show encrypted tab with error message
+                    decryptedTabs.push({
+                      title: '🔒 [Encrypted - Cannot Decrypt]',
+                      url: 'Error: Wrong secret key or corrupted data',
+                      favicon: '',
+                      notes: 'Cannot decrypt this tab',
+                      groupName: tab.groupName,
+                      date: tab.date,
+                      createdAt: tab.createdAt,
+                      createdBy: tab.createdBy,
+                      _id: tab._id,
+                      isEncrypted: true,
+                      decryptionError: true
+                    });
+                  }
+                } else {
+                  // Unencrypted tab
+                  decryptedTabs.push(tab);
+                }
+              }
+              
+              tabs = decryptedTabs;
+            } catch (error) {
+              showNotification('Error decrypting tabs: ' + error.message, 'error');
+            }
+          }
+          
+          displayTabs(tabs);
         } else {
           document.getElementById('tabs-list').innerHTML = '<div class="text-center text-gray-500 py-6">Failed to load tabs</div>';
         }
       }
     );
-  });
+  } catch (error) {
+    showNotification('Error loading tabs: ' + error.message, 'error');
+  }
 }
 
 function toggleGroup(groupName) {
@@ -410,7 +681,7 @@ function displayTabs(tabs) {
   
   Object.keys(groupedTabs).sort().forEach(groupName => {
     const groupTabs = groupedTabs[groupName];
-    const safeGroupName = groupName.replace(/[^a-zA-Z0-9]/g, '_'); // Safe ID
+    const safeGroupName = groupName.replace(/[^a-zA-Z0-9]/g, '_');
     
     html += `
       <div class="group-container">
@@ -436,21 +707,27 @@ function displayTabs(tabs) {
       const isLast = index === groupTabs.length - 1;
       const createdDate = formatDate(tab.createdAt || tab.date);
       const hasNotes = tab.notes && tab.notes.trim();
+      const isEncrypted = tab.isEncrypted;
+      const hasDecryptionError = tab.decryptionError;
+      
+      // Add encryption indicator
+      const encryptionIcon = isEncrypted ? '🔒' : '';
+      const errorStyle = hasDecryptionError ? 'bg-red-50 border-l-2 border-red-400' : '';
       
       html += `
-        <div class="tab-item ${!isLast ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors" 
-             data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}">
+        <div class="tab-item ${!isLast ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors ${errorStyle}" 
+             data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}" data-has-error="${hasDecryptionError}">
           <img class="w-4 h-4 mr-3 flex-shrink-0" 
                src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" 
                alt="favicon">
           <div class="tab-content">
-            <div class="tab-title font-medium text-gray-900" title="${escapeHTML(tab.title)}">${escapeHTML(tab.title)}</div>
+            <div class="tab-title font-medium text-gray-900" title="${escapeHTML(tab.title)}">${encryptionIcon} ${escapeHTML(tab.title)}</div>
             <div class="tab-url text-gray-500" title="${escapeHTML(tab.url)}">${escapeHTML(tab.url)}</div>
             ${hasNotes ? `<div class="tab-notes text-green-600 mt-1" title="${escapeHTML(tab.notes)}">📝 ${escapeHTML(tab.notes)}</div>` : ''}
-            <div class="text-gray-400 mt-1" style="font-size: 11px;">💾 ${createdDate} • 👤 mohitahlawat2001</div>
+            <div class="text-gray-400 mt-1" style="font-size: 11px;">💾 ${createdDate} • 👤 mohitahlawat2001 ${isEncrypted ? '• 🔐 Encrypted' : ''}</div>
           </div>
           <div class="tab-actions">
-            <button class="open-btn bg-blue-500 hover:bg-blue-600 text-white">Open</button>
+            <button class="open-btn bg-blue-500 hover:bg-blue-600 text-white" ${hasDecryptionError ? 'disabled title="Cannot open encrypted tab"' : ''}>Open</button>
             <button class="delete-btn bg-red-500 hover:bg-red-600 text-white">Delete</button>
           </div>
         </div>
@@ -465,17 +742,21 @@ function displayTabs(tabs) {
 
   tabsList.innerHTML = html;
 
-  // Add event listeners for tabs (NO INLINE HANDLERS)
+  // Add event listeners for tabs
   document.querySelectorAll('[data-tab-id]').forEach(tabItem => {
     const openBtn = tabItem.querySelector('.open-btn');
     const deleteBtn = tabItem.querySelector('.delete-btn');
+    const hasError = tabItem.getAttribute('data-has-error') === 'true';
     
-    if (openBtn) {
+    if (openBtn && !hasError) {
       openBtn.addEventListener('click', function() {
         const url = tabItem.getAttribute('data-tab-url');
         chrome.tabs.create({ url: url });
         showNotification('Tab opened successfully', 'success');
       });
+    } else if (openBtn && hasError) {
+      openBtn.style.opacity = '0.5';
+      openBtn.style.cursor = 'not-allowed';
     }
     
     if (deleteBtn) {
@@ -486,7 +767,7 @@ function displayTabs(tabs) {
     }
   });
 
-  // Add event listeners for group actions (NO INLINE HANDLERS)
+  // Add event listeners for group actions
   document.querySelectorAll('.delete-group-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const groupName = btn.getAttribute('data-group');
@@ -501,7 +782,7 @@ function displayTabs(tabs) {
     });
   });
 
-  // Add event listeners for toggle buttons (NO INLINE HANDLERS)
+  // Add event listeners for toggle buttons
   document.querySelectorAll('.toggle-group-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const safeGroupName = btn.getAttribute('data-group');
@@ -511,9 +792,16 @@ function displayTabs(tabs) {
 }
 
 function openAllTabsInGroup(groupName, tabs) {
-  showNotification(`Opening ${tabs.length} tabs from group "${groupName}"`, 'info');
+  const validTabs = tabs.filter(tab => !tab.decryptionError);
   
-  tabs.forEach((tab, index) => {
+  if (validTabs.length === 0) {
+    showNotification('No valid tabs to open in this group', 'warning');
+    return;
+  }
+  
+  showNotification(`Opening ${validTabs.length} tabs from group "${groupName}"`, 'info');
+  
+  validTabs.forEach((tab, index) => {
     setTimeout(() => {
       chrome.tabs.create({ url: tab.url, active: index === 0 });
     }, index * 100);
