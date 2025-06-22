@@ -98,7 +98,7 @@ function showNotification(message, type = 'info') {
   // Add to document
   document.body.appendChild(notification);
   
-  // Auto remove after 3 seconds
+  // Auto remove after 4 seconds (increased time)
   setTimeout(() => {
     notification.style.opacity = '0';
     setTimeout(() => {
@@ -106,7 +106,7 @@ function showNotification(message, type = 'info') {
         notification.parentNode.removeChild(notification);
       }
     }, 300);
-  }, 3000);
+  }, 4000);
 }
 
 function updateConnectionStatus(message, type) {
@@ -114,9 +114,9 @@ function updateConnectionStatus(message, type) {
   statusEl.textContent = message;
   
   if (type === 'success') {
-    statusEl.className = 'text-sm text-green-500';
+    statusEl.className = 'text-sm text-green-500 font-medium';
   } else if (type === 'error') {
-    statusEl.className = 'text-sm text-red-500';
+    statusEl.className = 'text-sm text-red-500 font-medium';
   } else {
     statusEl.className = 'text-sm text-gray-500';
   }
@@ -228,7 +228,7 @@ function saveTab(tab, groupName, notes, callback) {
       groupName: groupName,
       notes: notes,
       date: '2025-06-22',
-      createdAt: '2025-06-22 04:55:44',
+      createdAt: '2025-06-22 05:02:19',
       createdBy: 'mohitahlawat2001'
     };
 
@@ -266,7 +266,7 @@ function saveAllTabs(tabs, groupName, notes, callback) {
       groupName: groupName,
       notes: notes,
       date: '2025-06-22',
-      createdAt: '2025-06-22 04:55:44',
+      createdAt: '2025-06-22 05:02:19',
       createdBy: 'mohitahlawat2001'
     }));
 
@@ -366,7 +366,7 @@ function loadSavedTabs() {
         if (response && response.success) {
           displayTabs(response.tabs);
         } else {
-          document.getElementById('tabs-list').innerHTML = '<div class="text-center text-gray-500 py-4">Failed to load tabs</div>';
+          document.getElementById('tabs-list').innerHTML = '<div class="text-center text-gray-500 py-6">Failed to load tabs</div>';
         }
       }
     );
@@ -392,7 +392,7 @@ function displayTabs(tabs) {
   const tabsList = document.getElementById('tabs-list');
   
   if (!tabs || tabs.length === 0) {
-    tabsList.innerHTML = '<div class="text-center text-gray-500 py-4">No saved tabs found</div>';
+    tabsList.innerHTML = '<div class="text-center text-gray-500 py-6">No saved tabs found</div>';
     return;
   }
 
@@ -414,18 +414,18 @@ function displayTabs(tabs) {
     
     html += `
       <div class="group-container">
-        <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 rounded-t-md border-b border-blue-200 group-header">
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 rounded-t-md border-b border-blue-200 group-header">
           <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2" style="max-width: 180px;">
+            <div class="flex items-center gap-3" style="max-width: 250px;">
               <button class="toggle-group-btn text-blue-800 hover:text-blue-900 focus:outline-none flex-shrink-0" 
                       id="toggle-icon-${safeGroupName}" 
                       title="Collapse group"
                       data-group="${safeGroupName}">🔽</button>
               <h3 class="font-semibold text-sm text-blue-800 group-title">📁 ${escapeHTML(groupName)} <span class="text-blue-600">(${groupTabs.length})</span></h3>
             </div>
-            <div class="flex gap-1 flex-shrink-0">
-              <button class="open-all-group-btn text-blue-600 hover:text-blue-800 text-xs font-medium" data-group="${escapeHTML(groupName)}">Open All</button>
-              <button class="delete-group-btn text-red-500 hover:text-red-700 text-xs font-medium" data-group="${escapeHTML(groupName)}">Delete</button>
+            <div class="flex gap-2 flex-shrink-0">
+              <button class="open-all-group-btn text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 rounded hover:bg-blue-100" data-group="${escapeHTML(groupName)}">Open All</button>
+              <button class="delete-group-btn text-red-500 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-100" data-group="${escapeHTML(groupName)}">Delete</button>
             </div>
           </div>
         </div>
@@ -440,18 +440,18 @@ function displayTabs(tabs) {
       html += `
         <div class="tab-item ${!isLast ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors" 
              data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}">
-          <img class="w-4 h-4 mr-2 flex-shrink-0" 
+          <img class="w-4 h-4 mr-3 flex-shrink-0" 
                src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" 
                alt="favicon">
           <div class="tab-content">
             <div class="tab-title font-medium text-gray-900" title="${escapeHTML(tab.title)}">${escapeHTML(tab.title)}</div>
             <div class="tab-url text-gray-500" title="${escapeHTML(tab.url)}">${escapeHTML(tab.url)}</div>
             ${hasNotes ? `<div class="tab-notes text-green-600 mt-1" title="${escapeHTML(tab.notes)}">📝 ${escapeHTML(tab.notes)}</div>` : ''}
-            <div class="text-gray-400 mt-1" style="font-size: 11px;">💾 ${createdDate}</div>
+            <div class="text-gray-400 mt-1" style="font-size: 11px;">💾 ${createdDate} • 👤 mohitahlawat2001</div>
           </div>
           <div class="tab-actions">
             <button class="open-btn bg-blue-500 hover:bg-blue-600 text-white">Open</button>
-            <button class="delete-btn bg-red-500 hover:bg-red-600 text-white">Del</button>
+            <button class="delete-btn bg-red-500 hover:bg-red-600 text-white">Delete</button>
           </div>
         </div>
       `;
