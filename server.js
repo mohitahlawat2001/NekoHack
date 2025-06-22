@@ -3,33 +3,50 @@ const { MongoClient, ObjectId } = require('mongodb');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: ['chrome-extension://*', 'moz-extension://*', 'https://*', 'http://localhost:*'],
-  credentials: true
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json({ limit: '10mb' }));
 
-// Health check endpoint
+// Root endpoint - THIS IS CRUCIAL FOR VERCEL
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Tab Saver API is running!',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    timestamp: '2025-06-22 03:30:01',
+    version: '1.0.0',
+    author: 'mohitahlawat2001',
+    status: 'healthy',
+    endpoints: [
+      'GET /',
+      'GET /health',
+      'POST /test-connection',
+      'POST /save-tab',
+      'POST /save-all-tabs',
+      'POST /load-tabs',
+      'POST /load-groups',
+      'POST /delete-tab',
+      'POST /delete-group'
+    ]
   });
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'healthy', 
+    timestamp: '2025-06-22 03:30:01',
+    user: 'mohitahlawat2001'
+  });
 });
 
 // Test MongoDB connection
 app.post('/test-connection', async (req, res) => {
   const { mongodbUri } = req.body;
-  
-  console.log('Testing MongoDB connection...');
   
   if (!mongodbUri) {
     return res.status(400).json({ success: false, error: 'MongoDB URI is required' });
@@ -37,12 +54,18 @@ app.post('/test-connection', async (req, res) => {
 
   let client;
   try {
-    client = new MongoClient(mongodbUri);
+    client = new MongoClient(mongodbUri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+    });
     await client.connect();
     await client.db().admin().listDatabases();
     
-    console.log('MongoDB connection successful');
-    return res.json({ success: true, message: 'Connection successful' });
+    return res.json({ 
+      success: true, 
+      message: 'MongoDB connection successful',
+      timestamp: '2025-06-22 03:30:01'
+    });
   } catch (error) {
     console.error('MongoDB connection failed:', error);
     return res.status(500).json({ success: false, error: error.message });
@@ -69,8 +92,9 @@ app.post('/save-tab', async (req, res) => {
     const db = client.db('tabsaver');
     const result = await db.collection('tabs').insertOne({
       ...tabData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: new Date('2025-06-22T03:30:01Z'),
+      updatedAt: new Date('2025-06-22T03:30:01Z'),
+      serverTimestamp: new Date().toISOString()
     });
     
     return res.json({ 
@@ -102,10 +126,12 @@ app.post('/save-all-tabs', async (req, res) => {
     await client.connect();
     
     const db = client.db('tabsaver');
+    const currentTime = new Date('2025-06-22T03:30:01Z');
     const dataWithTimestamp = tabsData.map(tab => ({
       ...tab,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: currentTime,
+      updatedAt: currentTime,
+      serverTimestamp: new Date().toISOString()
     }));
     
     const result = await db.collection('tabs').insertMany(dataWithTimestamp);
@@ -187,7 +213,6 @@ app.post('/load-groups', async (req, res) => {
     const groups = await db.collection('tabs')
       .distinct('groupName');
     
-    // Filter out null/undefined groups and sort
     const filteredGroups = groups.filter(g => g).sort();
     
     return res.json({ 
@@ -270,25 +295,5 @@ app.post('/delete-group', async (req, res) => {
   }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, error: 'Internal server error' });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ success: false, error: 'Endpoint not found' });
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Tab Saver API is running on port ${PORT}`);
-  console.log(`📅 Started at: ${new Date().toISOString()}`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
+// IMPORTANT: Export the app for Vercel
+module.exports = app;
