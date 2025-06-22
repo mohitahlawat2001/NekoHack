@@ -75,3 +75,57 @@ The following endpoints are configured:
 - The `.env` file should not be committed to version control
 - Always run `npm run build:config` after updating your `.env` file
 - The Chrome extension uses the generated `config.js` file, not the `.env` file directly
+
+## Installation for Users
+
+### Quick Start (Recommended)
+
+1. **Download the extension:**
+   - Go to [Releases](../../releases) and download the latest `nekohack-extension.zip`
+   - Or clone this repository: `git clone https://github.com/yourusername/nekohack.git`
+
+2. **Install in Chrome:**
+   - Open Chrome and go to `chrome://extensions/`
+   - Enable "Developer mode" (toggle in top right)
+   - Click "Load unpacked" and select the downloaded/cloned folder
+   - The extension icon should appear in your Chrome toolbar
+
+3. **Start using:**
+   - Click the extension icon to open the popup
+   - Use "Save Current Tab" or "Save All Tabs" to store your tabs
+   - Use "Load Saved Tabs" to restore them later
+
+### Features
+
+- 🔖 **Save individual tabs** - Preserve important pages for later
+- 📚 **Save all open tabs** - Backup your entire browsing session
+- 📅 **Date-organized storage** - Easily find tabs saved on specific dates
+- 🗑️ **Delete saved tabs** - Remove tabs you no longer need
+- ☁️ **Cloud storage** - Your tabs are saved to MongoDB (persistent across devices)
+
+### How to Use
+
+1. **Saving Tabs:**
+   - Click the extension icon in your toolbar
+   - Choose "Save Current Tab" to save the active tab
+   - Choose "Save All Tabs" to save every open tab in the current window
+
+2. **Loading Tabs:**
+   - Click "Load Saved Tabs" in the popup
+   - Select a date from the dropdown to see tabs saved on that day
+   - Click any tab title to open it, or "Load All" to open all tabs from that date
+
+3. **Managing Tabs:**
+   - Use the delete button (🗑️) next to any saved tab to remove it
+   - Tabs are automatically organized by the date they were saved
+
+### Troubleshooting
+
+If the extension isn't working:
+- Make sure you have an internet connection (for cloud storage)
+- Check that the extension is enabled in `chrome://extensions/`
+- Try refreshing the page and using the extension again
+
+### For Developers
+
+If you want to set up your own backend or contribute to development, see the [Development Setup](#setup) section above.
