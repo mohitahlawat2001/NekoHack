@@ -6,12 +6,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: ['chrome-extension://*', 'moz-extension://*', 'https://*', 'http://localhost:*'],
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
 
-// Test endpoint
+// Health check endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'Tab Saver API is running!' });
+  res.json({ 
+    message: 'Tab Saver API is running!',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
 // Test MongoDB connection
@@ -31,7 +42,7 @@ app.post('/test-connection', async (req, res) => {
     await client.db().admin().listDatabases();
     
     console.log('MongoDB connection successful');
-    return res.json({ success: true });
+    return res.json({ success: true, message: 'Connection successful' });
   } catch (error) {
     console.error('MongoDB connection failed:', error);
     return res.status(500).json({ success: false, error: error.message });
@@ -58,12 +69,14 @@ app.post('/save-tab', async (req, res) => {
     const db = client.db('tabsaver');
     const result = await db.collection('tabs').insertOne({
       ...tabData,
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
     
     return res.json({ 
       success: true, 
-      tabId: result.insertedId 
+      tabId: result.insertedId,
+      message: 'Tab saved successfully'
     });
   } catch (error) {
     console.error('Save tab failed:', error);
@@ -91,14 +104,16 @@ app.post('/save-all-tabs', async (req, res) => {
     const db = client.db('tabsaver');
     const dataWithTimestamp = tabsData.map(tab => ({
       ...tab,
-      createdAt: new Date()
+      createdAt: new Date(),
+      updatedAt: new Date()
     }));
     
     const result = await db.collection('tabs').insertMany(dataWithTimestamp);
     
     return res.json({ 
       success: true, 
-      insertedCount: result.insertedCount 
+      insertedCount: result.insertedCount,
+      message: `${result.insertedCount} tabs saved successfully`
     });
   } catch (error) {
     console.error('Save all tabs failed:', error);
@@ -142,7 +157,8 @@ app.post('/load-tabs', async (req, res) => {
     
     return res.json({ 
       success: true, 
-      tabs 
+      tabs,
+      count: tabs.length
     });
   } catch (error) {
     console.error('Load tabs failed:', error);
@@ -176,7 +192,8 @@ app.post('/load-groups', async (req, res) => {
     
     return res.json({ 
       success: true, 
-      groups: filteredGroups
+      groups: filteredGroups,
+      count: filteredGroups.length
     });
   } catch (error) {
     console.error('Load groups failed:', error);
@@ -209,7 +226,8 @@ app.post('/delete-tab', async (req, res) => {
     }
     
     return res.json({ 
-      success: true 
+      success: true,
+      message: 'Tab deleted successfully'
     });
   } catch (error) {
     console.error('Delete tab failed:', error);
@@ -239,7 +257,8 @@ app.post('/delete-group', async (req, res) => {
     
     return res.json({ 
       success: true,
-      deletedCount: result.deletedCount
+      deletedCount: result.deletedCount,
+      message: `Group deleted successfully. ${result.deletedCount} tabs removed.`
     });
   } catch (error) {
     console.error('Delete group failed:', error);
@@ -251,7 +270,25 @@ app.post('/delete-group', async (req, res) => {
   }
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ success: false, error: 'Internal server error' });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: 'Endpoint not found' });
+});
+
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Test the server at: http://localhost:${PORT}`);
+  console.log(`🚀 Tab Saver API is running on port ${PORT}`);
+  console.log(`📅 Started at: ${new Date().toISOString()}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
 });

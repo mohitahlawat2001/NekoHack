@@ -1,21 +1,23 @@
 {
   "name": "tab-saver-server",
   "version": "1.0.0",
-  "description": "Serverless API for Tab Saver Chrome Extension",
+  "description": "Backend API for Tab Saver Chrome Extension",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build:config": "node scripts/build-config.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": ["chrome-extension", "tab-saver", "mongodb", "api"],
+  "author": "mohitahlawat2001",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "mongodb": "^6.3.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.0.0"
+    "cors": "^2.8.5"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0"
+    "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=18.0.0"
