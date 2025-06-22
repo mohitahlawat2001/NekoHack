@@ -228,7 +228,7 @@ function saveTab(tab, groupName, notes, callback) {
       groupName: groupName,
       notes: notes,
       date: '2025-06-22',
-      createdAt: '2025-06-22 04:39:37',
+      createdAt: '2025-06-22 04:55:44',
       createdBy: 'mohitahlawat2001'
     };
 
@@ -266,7 +266,7 @@ function saveAllTabs(tabs, groupName, notes, callback) {
       groupName: groupName,
       notes: notes,
       date: '2025-06-22',
-      createdAt: '2025-06-22 04:39:37',
+      createdAt: '2025-06-22 04:55:44',
       createdBy: 'mohitahlawat2001'
     }));
 
@@ -413,7 +413,7 @@ function displayTabs(tabs) {
     const safeGroupName = groupName.replace(/[^a-zA-Z0-9]/g, '_'); // Safe ID
     
     html += `
-      <div class="w-full mb-4 group" id="group-${safeGroupName}">
+      <div class="group-container">
         <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 rounded-t-md border-b border-blue-200 group-header">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2" style="max-width: 180px;">
@@ -440,7 +440,9 @@ function displayTabs(tabs) {
       html += `
         <div class="tab-item ${!isLast ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors" 
              data-tab-id="${tab._id}" data-tab-url="${escapeHTML(tab.url)}">
-          <img class="w-4 h-4 mr-2 flex-shrink-0" src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'">
+          <img class="w-4 h-4 mr-2 flex-shrink-0" 
+               src="${tab.favicon || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'}" 
+               alt="favicon">
           <div class="tab-content">
             <div class="tab-title font-medium text-gray-900" title="${escapeHTML(tab.title)}">${escapeHTML(tab.title)}</div>
             <div class="tab-url text-gray-500" title="${escapeHTML(tab.url)}">${escapeHTML(tab.url)}</div>
@@ -448,8 +450,8 @@ function displayTabs(tabs) {
             <div class="text-gray-400 mt-1" style="font-size: 11px;">💾 ${createdDate}</div>
           </div>
           <div class="tab-actions">
-            <button class="open-btn bg-blue-500 hover:bg-blue-600 text-white" data-action="open">Open</button>
-            <button class="delete-btn bg-red-500 hover:bg-red-600 text-white" data-action="delete">Del</button>
+            <button class="open-btn bg-blue-500 hover:bg-blue-600 text-white">Open</button>
+            <button class="delete-btn bg-red-500 hover:bg-red-600 text-white">Del</button>
           </div>
         </div>
       `;
@@ -463,13 +465,13 @@ function displayTabs(tabs) {
 
   tabsList.innerHTML = html;
 
-  // Add event listeners for tabs
+  // Add event listeners for tabs (NO INLINE HANDLERS)
   document.querySelectorAll('[data-tab-id]').forEach(tabItem => {
     const openBtn = tabItem.querySelector('.open-btn');
     const deleteBtn = tabItem.querySelector('.delete-btn');
     
     if (openBtn) {
-      openBtn.addEventListener('click', () => {
+      openBtn.addEventListener('click', function() {
         const url = tabItem.getAttribute('data-tab-url');
         chrome.tabs.create({ url: url });
         showNotification('Tab opened successfully', 'success');
@@ -477,31 +479,31 @@ function displayTabs(tabs) {
     }
     
     if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
+      deleteBtn.addEventListener('click', function() {
         const tabId = tabItem.getAttribute('data-tab-id');
         deleteTab(tabId);
       });
     }
   });
 
-  // Add event listeners for group actions
+  // Add event listeners for group actions (NO INLINE HANDLERS)
   document.querySelectorAll('.delete-group-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', function() {
       const groupName = btn.getAttribute('data-group');
       deleteGroup(groupName);
     });
   });
 
   document.querySelectorAll('.open-all-group-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', function() {
       const groupName = btn.getAttribute('data-group');
       openAllTabsInGroup(groupName, groupedTabs[groupName]);
     });
   });
 
-  // Add event listeners for toggle buttons
+  // Add event listeners for toggle buttons (NO INLINE HANDLERS)
   document.querySelectorAll('.toggle-group-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', function() {
       const safeGroupName = btn.getAttribute('data-group');
       toggleGroup(safeGroupName);
     });
