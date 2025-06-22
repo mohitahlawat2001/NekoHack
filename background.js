@@ -1,19 +1,21 @@
 // API configuration
-const API_BASE_URL = "http://localhost:3000";
+//change this to localhost:3000 if you are running the server locally
+// or to the deployed URL if you have hosted it on a platform like Vercel,
+const API_BASE_URL = "https://neko-hack.vercel.app";
 
 // Handle messages from popup.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Received message:', request.action);
-  
+  console.log("Received message:", request.action);
+
   switch (request.action) {
     case "testMongoDBConnection":
       testConnection(request.mongodbUri)
         .then((result) => {
-          console.log('Test connection result:', result);
+          console.log("Test connection result:", result);
           sendResponse(result);
         })
         .catch((error) => {
-          console.error('Test connection error:', error);
+          console.error("Test connection error:", error);
           sendResponse({ success: false, error: error.message });
         });
       return true;
@@ -21,37 +23,49 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case "saveTab":
       saveTabToMongoDB(request.mongodbUri, request.tabData)
         .then((result) => sendResponse(result))
-        .catch((error) => sendResponse({ success: false, error: error.message }));
+        .catch((error) =>
+          sendResponse({ success: false, error: error.message })
+        );
       return true;
 
     case "saveAllTabs":
       saveAllTabsToMongoDB(request.mongodbUri, request.tabsData)
         .then((result) => sendResponse(result))
-        .catch((error) => sendResponse({ success: false, error: error.message }));
+        .catch((error) =>
+          sendResponse({ success: false, error: error.message })
+        );
       return true;
 
     case "loadTabs":
       loadTabsFromMongoDB(request.mongodbUri, request.date, request.groupName)
         .then((result) => sendResponse(result))
-        .catch((error) => sendResponse({ success: false, error: error.message }));
+        .catch((error) =>
+          sendResponse({ success: false, error: error.message })
+        );
       return true;
 
     case "loadGroups":
       loadGroupsFromMongoDB(request.mongodbUri)
         .then((result) => sendResponse(result))
-        .catch((error) => sendResponse({ success: false, error: error.message }));
+        .catch((error) =>
+          sendResponse({ success: false, error: error.message })
+        );
       return true;
 
     case "deleteTab":
       deleteTabFromMongoDB(request.mongodbUri, request.tabId)
         .then((result) => sendResponse(result))
-        .catch((error) => sendResponse({ success: false, error: error.message }));
+        .catch((error) =>
+          sendResponse({ success: false, error: error.message })
+        );
       return true;
 
     case "deleteGroup":
       deleteGroupFromMongoDB(request.mongodbUri, request.groupName)
         .then((result) => sendResponse(result))
-        .catch((error) => sendResponse({ success: false, error: error.message }));
+        .catch((error) =>
+          sendResponse({ success: false, error: error.message })
+        );
       return true;
   }
 });
@@ -59,8 +73,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Test MongoDB connection
 async function testConnection(mongodbUri) {
   try {
-    console.log('Testing connection to:', `${API_BASE_URL}/test-connection`);
-    
+    console.log("Testing connection to:", `${API_BASE_URL}/test-connection`);
+
     const response = await fetch(`${API_BASE_URL}/test-connection`, {
       method: "POST",
       headers: {
@@ -69,14 +83,14 @@ async function testConnection(mongodbUri) {
       body: JSON.stringify({ mongodbUri }),
     });
 
-    console.log('Response status:', response.status);
+    console.log("Response status:", response.status);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
-    console.log('Connection test result:', result);
+    console.log("Connection test result:", result);
     return result;
   } catch (error) {
     console.error("Connection test failed:", error);
