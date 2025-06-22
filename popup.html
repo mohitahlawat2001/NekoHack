@@ -15,49 +15,104 @@
       overflow-x: hidden !important;
     }
     
+    .tab-item {
+      width: 316px !important;
+      max-width: 316px !important;
+      min-width: 316px !important;
+      display: flex !important;
+      align-items: center !important;
+      padding: 8px !important;
+      box-sizing: border-box !important;
+    }
+    
     .tab-content {
-      width: 220px !important;
-      min-width: 220px !important;
-      max-width: 220px !important;
+      width: 200px !important;
+      min-width: 200px !important;
+      max-width: 200px !important;
+      flex-shrink: 0 !important;
+      overflow: hidden !important;
     }
     
     .tab-title {
-      width: 220px !important;
+      width: 200px !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
+      font-size: 14px !important;
+      line-height: 1.2 !important;
     }
     
     .tab-url {
-      width: 220px !important;
+      width: 200px !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
+      font-size: 12px !important;
+      line-height: 1.2 !important;
     }
     
     .tab-notes {
-      width: 220px !important;
+      width: 200px !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
+      font-size: 12px !important;
+      line-height: 1.2 !important;
     }
     
     .tab-actions {
-      width: 110px !important;
-      min-width: 110px !important;
+      width: 100px !important;
+      min-width: 100px !important;
+      max-width: 100px !important;
       flex-shrink: 0 !important;
+      display: flex !important;
+      gap: 4px !important;
+      justify-content: flex-end !important;
+      margin-left: 8px !important;
+    }
+    
+    .tab-actions button {
+      padding: 4px 8px !important;
+      font-size: 11px !important;
+      border-radius: 4px !important;
+      border: none !important;
+      cursor: pointer !important;
+      transition: all 0.2s !important;
+      width: 45px !important;
+      text-align: center !important;
+    }
+    
+    .group-container {
+      width: 320px !important;
+      max-width: 320px !important;
+      overflow: hidden !important;
+      margin-bottom: 16px !important;
     }
     
     .group-header {
       width: 100% !important;
-      max-width: 368px !important; /* 400px - 32px padding */
+      max-width: 340px !important;
+      box-sizing: border-box !important;
     }
     
     .group-title {
-      max-width: 200px !important;
+      max-width: 150px !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       white-space: nowrap !important;
+    }
+    
+    .notification {
+      position: fixed !important;
+      top: 10px !important;
+      right: 10px !important;
+      z-index: 9999 !important;
+      padding: 8px 12px !important;
+      border-radius: 6px !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+      transition: all 0.3s ease !important;
     }
   </style>
 </head>
@@ -102,7 +157,7 @@
         <input type="text" id="new-group-name" placeholder="Enter new group name" 
                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                style="max-width: 320px;">
-        <div class="text-xs text-gray-500 mt-1">Default: 2025-06-21 (Today's date)</div>
+        <div class="text-xs text-gray-500 mt-1">Default: 2025-06-22 (Today's date)</div>
       </div>
 
       <!-- Existing group selection -->
@@ -127,7 +182,7 @@
       <!-- Current selected group display -->
       <div class="bg-blue-50 border border-blue-200 rounded-md p-2">
         <div class="text-xs text-blue-600 font-medium">Selected Group:</div>
-        <div id="current-group-display" class="text-sm font-semibold text-blue-800 truncate" style="max-width: 300px;">2025-06-21</div>
+        <div id="current-group-display" class="text-sm font-semibold text-blue-800 truncate" style="max-width: 300px;">2025-06-22</div>
       </div>
     </div>
 
@@ -157,7 +212,7 @@
                 style="max-width: 120px;">
           <option value="">All groups</option>
         </select>
-        <input type="date" id="date-filter" value="2025-06-21" 
+        <input type="date" id="date-filter" value="2025-06-22" 
                class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                style="max-width: 130px;">
         <button id="refresh-tabs" 
@@ -166,7 +221,7 @@
           Refresh
         </button>
       </div>
-      <div id="tabs-list" class="max-h-[300px] overflow-y-auto" style="width: 320px; max-width: 320px;">
+      <div id="tabs-list" class="max-h-[300px] overflow-y-auto" style="width: 340px; max-width: 340px;">
         <!-- Saved tabs will be displayed here -->
         <div class="text-center text-gray-500 py-4">No saved tabs found</div>
       </div>
