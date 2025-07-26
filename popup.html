@@ -413,6 +413,28 @@
       color: var(--text-primary) !important;
       color-scheme: dark;
     }
+
+    /* Search bar styling */
+    #search-bar {
+      background-color: var(--bg-tertiary) !important;
+      color: var(--text-primary) !important;
+      border: 1px solid var(--border-color) !important;
+      padding: 8px 12px !important;
+      border-radius: 6px !important;
+      width: 100% !important;
+      font-size: 14px !important;
+    }
+
+    #search-bar:focus {
+      background-color: var(--bg-secondary) !important;
+      border-color: var(--accent-blue) !important;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+      outline: none !important;
+    }
+
+    #search-bar::placeholder {
+      color: var(--text-muted) !important;
+    }
   </style>
 </head>
 <body class="m-0 p-0 font-sans">
@@ -581,6 +603,11 @@
       <h2 class="text-lg font-semibold mb-3">
         <i class="fas fa-history section-icon"></i>Saved Tabs
       </h2>
+      <!-- Search Bar -->
+      <div class="mb-3 px-1">
+        <input type="text" id="search-bar" class="form-control" placeholder="🔍 Search saved tabs...">
+      </div>
+      
       <div class="flex gap-3 mb-4">
         <select id="group-filter" 
                 class="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"

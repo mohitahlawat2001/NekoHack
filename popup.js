@@ -99,6 +99,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("existing-group-radio")
     .addEventListener("change", handleGroupMethodChange);
+
+  // Add event listener for search bar
+  document
+    .getElementById("search-bar")
+    .addEventListener("input", handleSearch);
 });
 
 // Encryption Functions
@@ -994,6 +999,7 @@ function displayTabs(tabs) {
              ${errorBorderColor}
              data-tab-id="${tab._id}" 
              data-tab-url="${escapeHTML(tab.url)}" 
+             data-url="${escapeHTML(tab.url)}"
              data-has-error="${hasDecryptionError}"
              style="border-color: var(--border-color);"
              onmouseover="this.style.backgroundColor='var(--hover-bg)';"
@@ -1196,4 +1202,46 @@ function escapeHTML(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+function handleSearch(event) {
+  const query = event.target.value.toLowerCase();
+  const tabsList = document.getElementById("tabs-list");
+  const items = tabsList.getElementsByClassName("tab-item");
+
+  for (let item of items) {
+    const titleElement = item.querySelector('.tab-title');
+    const url = item.dataset.url;
+    
+    if (titleElement && url) {
+      const title = titleElement.textContent.toLowerCase();
+      const urlLower = url.toLowerCase();
+
+      if (title.includes(query) || urlLower.includes(query)) {
+        item.style.display = "flex";
+      } else {
+        item.style.display = "none";
+      }
+    }
+  }
+
+  // Handle group visibility based on whether any tabs in the group are visible
+  const groupContainers = tabsList.getElementsByClassName("group-container");
+  for (let groupContainer of groupContainers) {
+    const groupTabItems = groupContainer.getElementsByClassName("tab-item");
+    let hasVisibleTabs = false;
+    
+    for (let tabItem of groupTabItems) {
+      if (tabItem.style.display !== "none") {
+        hasVisibleTabs = true;
+        break;
+      }
+    }
+    
+    if (hasVisibleTabs || query === "") {
+      groupContainer.style.display = "block";
+    } else {
+      groupContainer.style.display = "none";
+    }
+  }
 }
