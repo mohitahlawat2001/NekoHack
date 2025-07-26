@@ -67,6 +67,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sendResponse({ success: false, error: error.message })
         );
       return true;
+
+    case "webAnalysis":
+      analyzeWebPage(request.url, request.query, request.geminiApiKey)
+        .then((result) => sendResponse(result))
+        .catch((error) =>
+          sendResponse({ success: false, error: error.message })
+        );
+      return true;
   }
 });
 
@@ -232,6 +240,34 @@ async function deleteGroupFromMongoDB(mongodbUri, groupName) {
     return result;
   } catch (error) {
     console.error("Delete group failed:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Analyze web page using Gemini AI
+async function analyzeWebPage(url, query, geminiApiKey) {
+  try {
+    console.log("Analyzing web page:", url);
+
+    const response = await fetch(`${API_BASE_URL}/web-analysis`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url, query, geminiApiKey }),
+    });
+
+    console.log("Web analysis response status:", response.status);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log("Web analysis result:", result);
+    return result;
+  } catch (error) {
+    console.error("Web analysis failed:", error);
     return { success: false, error: error.message };
   }
 }

@@ -1,6 +1,10 @@
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const cors = require('cors');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { JSDOM } = require('jsdom');
 
 const app = express();
 
@@ -31,7 +35,8 @@ app.get('/', (req, res) => {
       'POST /load-tabs',
       'POST /load-groups',
       'POST /delete-tab',
-      'POST /delete-group'
+      'POST /delete-group',
+      'POST /web-analysis'
     ]
   });
 });
@@ -295,5 +300,219 @@ app.post('/delete-group', async (req, res) => {
   }
 });
 
+// Web Analysis endpoint
+app.post('/web-analysis', async (req, res) => {
+  const { url, query, geminiApiKey } = req.body;
+  
+  if (!url || !query) {
+    return res.status(400).json({ success: false, error: 'URL and query are required' });
+  }
+
+  if (!geminiApiKey) {
+    return res.status(400).json({ success: false, error: 'Gemini API key is required' });
+  }
+
+  try {
+    // Step 1: Validate URL
+    const validatedUrl = validateUrl(url);
+    if (!validatedUrl) {
+      return res.status(400).json({ success: false, error: 'Invalid URL provided' });
+    }
+
+    // Step 2: Fetch web page content
+    const html = await fetchWebPage(validatedUrl);
+    
+    // Step 3: Extract content from HTML
+    const extractedContent = await extractContent(html, validatedUrl);
+    
+    // Step 4: Analyze content with Gemini AI
+    const analysis = await analyzeContentWithGemini(extractedContent, query, geminiApiKey);
+    
+    return res.json({
+      success: true,
+      url: validatedUrl,
+      query,
+      pageInfo: {
+        title: extractedContent.title,
+        siteName: extractedContent.siteName
+      },
+      analysis: analysis.analysis,
+      timestamp: analysis.timestamp
+    });
+    
+  } catch (error) {
+    console.error('Web analysis failed:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Helper functions for web analysis
+function validateUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      return null;
+    }
+    return url;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function fetchWebPage(url) {
+  try {
+    const userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15'
+    ];
+
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': userAgents[Math.floor(Math.random() * userAgents.length)],
+        'Accept': 'text/html,application/xhtml+xml,application/xml',
+        'Accept-Language': 'en-US,en;q=0.9'
+      },
+      timeout: 15000,
+      maxRedirects: 5
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to fetch page: Status ${response.status}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching webpage ${url}:`, error.message);
+    throw new Error(`Failed to fetch webpage: ${error.message}`);
+  }
+}
+
+async function extractContent(html, url) {
+  try {
+    // Use basic extraction with cheerio
+    const $ = cheerio.load(html);
+    
+    // Remove scripts, styles, and other non-content elements
+    $('script, style, noscript, iframe, img, svg, canvas, [style*="display:none"]').remove();
+    
+    const title = $('title').text().trim();
+    const metaDescription = $('meta[name="description"]').attr('content') || '';
+    
+    // Get main content (prioritize main content areas)
+    let content = '';
+    ['main', 'article', '#content', '.content', '#main', '.main'].forEach(selector => {
+      if (content.length < 1000 && $(selector).length) {
+        content += $(selector).text().trim() + ' ';
+      }
+    });
+    
+    // If still no substantial content, get body text
+    if (content.length < 500) {
+      content = $('body').text().trim();
+    }
+    
+    // Clean up the content (remove excessive whitespace)
+    content = content.replace(/\s+/g, ' ').trim();
+    
+    return {
+      title,
+      content,
+      excerpt: metaDescription,
+      siteName: extractSiteName(url),
+      contentType: 'general'
+    };
+  } catch (error) {
+    console.error(`Error extracting content from webpage:`, error.message);
+    throw new Error(`Failed to extract content: ${error.message}`);
+  }
+}
+
+function extractSiteName(url) {
+  try {
+    const { hostname } = new URL(url);
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+async function analyzeContentWithGemini(content, userQuery, apiKey) {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    // Truncate content if too long
+    const truncatedContent = truncateContent(content.content);
+    
+    const prompt = constructPrompt(content, userQuery, truncatedContent);
+    
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
+      }
+    });
+
+    const responseText = result.response.text();
+    
+    return {
+      analysis: responseText,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error calling Gemini API:', error);
+    throw new Error(`AI analysis failed: ${error.message}`);
+  }
+}
+
+function constructPrompt(content, userQuery, truncatedContent) {
+  return `
+Task: Analyze web content and answer a specific question.
+
+Web Page Information:
+Title: ${content.title}
+Website: ${content.siteName}
+Content: ${truncatedContent}
+
+User Question: ${userQuery}
+
+Instructions:
+1. Focus only on information present in the provided content
+2. If the content doesn't contain information to answer the question, state that clearly
+3. Provide specific references to parts of the content that support your answer
+4. Keep your answer concise, accurate, and directly relevant to the question
+5. Do not make assumptions about content not included in the excerpt
+6. Format your answer in a clear, readable manner
+
+Your analysis:
+`;
+}
+
+function truncateContent(content) {
+  // Keep content under ~8,000 characters to leave room for the rest of the prompt
+  const maxLength = 8000;
+  if (content.length <= maxLength) return content;
+  
+  // Take the first and last parts to preserve context
+  const firstPart = content.substring(0, maxLength / 2);
+  const lastPart = content.substring(content.length - maxLength / 2);
+  
+  return `${firstPart}\n\n[...Content truncated due to length...]\n\n${lastPart}`;
+}
+
 // IMPORTANT: Export the app for Vercel
 module.exports = app;
+
+// For local development
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}

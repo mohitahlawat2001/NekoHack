@@ -517,6 +517,66 @@
       </div>
     </div>
 
+    <!-- Web Analysis Section -->
+    <div class="card rounded-lg shadow p-4 mb-4">
+      <h2 class="text-lg font-semibold mb-3">
+        <i class="fas fa-search section-icon"></i>Web Page Analysis
+      </h2>
+      
+      <!-- Gemini API Key Input -->
+      <div class="password-input-container mb-3">
+        <input type="password" id="gemini-api-key" placeholder="Enter Gemini API key" 
+               class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+        <i class="fas fa-eye password-toggle" id="toggle-gemini-key-visibility" title="Show/Hide API Key"></i>
+      </div>
+      
+      <!-- URL Input -->
+      <div class="mb-3">
+        <input type="url" id="analysis-url" placeholder="Enter website URL to analyze" 
+               class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+        <div class="text-xs mt-1" style="color: var(--text-muted);">
+          <i class="fas fa-info-circle fa-icon"></i>Enter the full URL (e.g., https://example.com)
+        </div>
+      </div>
+      
+      <!-- Query Input -->
+      <div class="mb-3">
+        <textarea id="analysis-query" placeholder="What would you like to know about this page?" 
+                  class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field"
+                  rows="3" style="resize: vertical;"></textarea>
+        <div class="text-xs mt-1" style="color: var(--text-muted);">
+          <i class="fas fa-info-circle fa-icon"></i>Examples: "Summarize the main points", "What is this article about?", "Extract key insights"
+        </div>
+      </div>
+      
+      <!-- Analyze Button -->
+      <button id="analyze-webpage" 
+              class="w-full btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
+        <i class="fas fa-brain fa-icon"></i>Analyze Web Page
+      </button>
+      
+      <!-- Analysis Status -->
+      <div id="analysis-status" class="text-sm mt-2"></div>
+      
+      <!-- Analysis Results -->
+      <div id="analysis-results" class="mt-4 hidden">
+        <div class="bg-tertiary border rounded-md p-3" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+          <h4 class="font-semibold text-sm mb-2" style="color: var(--text-primary);">
+            <i class="fas fa-lightbulb fa-icon"></i>Analysis Results
+          </h4>
+          <div id="analysis-content" class="text-sm" style="color: var(--text-secondary); white-space: pre-wrap; line-height: 1.5;"></div>
+          <div class="mt-2 pt-2 border-t text-xs" style="border-color: var(--border-color); color: var(--text-muted);">
+            <span id="analysis-page-info"></span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-xs mt-2 warning-box p-2 rounded border-l-2">
+        <i class="fas fa-exclamation-triangle status-icon warning-icon"></i>
+        <strong>Note:</strong> Your Gemini API key is required for analysis. It's not stored and only used for this request.
+      </div>
+    </div>
+
     <!-- Group Selection Section -->
     <div class="card rounded-lg shadow p-4 mb-4">
       <h2 class="text-lg font-semibold mb-3">

@@ -66,6 +66,12 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("copy-current-key")
     .addEventListener("click", copyCurrentKey);
   document
+    .getElementById("toggle-gemini-key-visibility")
+    .addEventListener("click", toggleGeminiKeyVisibility);
+  document
+    .getElementById("analyze-webpage")
+    .addEventListener("click", handleAnalyzeWebpage);
+  document
     .getElementById("save-current-tab")
     .addEventListener("click", handleSaveCurrentTab);
   document
@@ -1244,4 +1250,124 @@ function handleSearch(event) {
       groupContainer.style.display = "none";
     }
   }
+}
+
+// Web Analysis Functions
+function toggleGeminiKeyVisibility() {
+  const keyInput = document.getElementById("gemini-api-key");
+  const toggleIcon = document.getElementById("toggle-gemini-key-visibility");
+
+  if (keyInput.type === "password") {
+    keyInput.type = "text";
+    toggleIcon.className = "fas fa-eye-slash password-toggle";
+    toggleIcon.title = "Hide API key";
+  } else {
+    keyInput.type = "password";
+    toggleIcon.className = "fas fa-eye password-toggle";
+    toggleIcon.title = "Show API key";
+  }
+}
+
+function handleAnalyzeWebpage() {
+  const apiKey = document.getElementById("gemini-api-key").value.trim();
+  const url = document.getElementById("analysis-url").value.trim();
+  const query = document.getElementById("analysis-query").value.trim();
+
+  // Validation
+  if (!apiKey) {
+    showNotification("Please enter your Gemini API key", "error");
+    return;
+  }
+
+  if (!url) {
+    showNotification("Please enter a URL to analyze", "error");
+    return;
+  }
+
+  if (!query) {
+    showNotification("Please enter a question about the webpage", "error");
+    return;
+  }
+
+  // Validate URL format
+  try {
+    new URL(url);
+  } catch (error) {
+    showNotification("Please enter a valid URL (e.g., https://example.com)", "error");
+    return;
+  }
+
+  // Show loading state
+  const button = document.getElementById("analyze-webpage");
+  const originalHTML = button.innerHTML;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin fa-icon"></i>Analyzing...';
+  button.disabled = true;
+
+  updateAnalysisStatus("Fetching and analyzing webpage content...", "");
+  hideAnalysisResults();
+
+  // Call the background script to perform analysis
+  chrome.runtime.sendMessage(
+    {
+      action: "webAnalysis",
+      url: url,
+      query: query,
+      geminiApiKey: apiKey,
+    },
+    (response) => {
+      // Reset button state
+      button.innerHTML = originalHTML;
+      button.disabled = false;
+
+      if (response && response.success) {
+        updateAnalysisStatus("Analysis completed successfully", "success");
+        showAnalysisResults(response);
+        showNotification("Web page analysis completed!", "success");
+      } else {
+        const errorMsg = `Analysis failed: ${
+          response ? response.error : "Unknown error"
+        }`;
+        updateAnalysisStatus(errorMsg, "error");
+        showNotification(errorMsg, "error");
+      }
+    }
+  );
+}
+
+function updateAnalysisStatus(message, type) {
+  const statusEl = document.getElementById("analysis-status");
+  statusEl.innerHTML = `<i class="fas ${
+    type === "success"
+      ? "fa-check-circle"
+      : type === "error"
+      ? "fa-times-circle"
+      : "fa-info-circle"
+  } fa-icon"></i>${message}`;
+
+  if (type === "success") {
+    statusEl.style.color = "var(--accent-green)";
+  } else if (type === "error") {
+    statusEl.style.color = "var(--accent-red)";
+  } else {
+    statusEl.style.color = "var(--text-muted)";
+  }
+}
+
+function showAnalysisResults(response) {
+  const resultsDiv = document.getElementById("analysis-results");
+  const contentDiv = document.getElementById("analysis-content");
+  const pageInfoDiv = document.getElementById("analysis-page-info");
+
+  contentDiv.textContent = response.analysis;
+  pageInfoDiv.innerHTML = `
+    <i class="fas fa-globe fa-icon"></i>Page: ${escapeHTML(response.pageInfo.title)} 
+    • <i class="fas fa-clock fa-icon"></i>Analyzed: ${formatDate(response.timestamp)}
+  `;
+
+  resultsDiv.classList.remove("hidden");
+}
+
+function hideAnalysisResults() {
+  const resultsDiv = document.getElementById("analysis-results");
+  resultsDiv.classList.add("hidden");
 }
