@@ -625,25 +625,48 @@ function handleSaveConnection() {
 
   updateConnectionStatus("Testing connection...", "");
 
-  chrome.runtime.sendMessage(
-    { action: "testMongoDBConnection", mongodbUri },
-    (response) => {
-      if (response && response.success) {
-        chrome.storage.local.set({ mongodbUri }, () => {
-          updateConnectionStatus("Connection successful and saved", "success");
-          showNotification("MongoDB connection successful!", "success");
-          loadExistingGroups();
-          loadSavedTabs();
-        });
-      } else {
-        const errorMsg = `Connection failed: ${
-          response ? response.error : "Unknown error"
-        }`;
+  // Try Chrome extension context first, fallback to direct API call
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage(
+      { action: "testMongoDBConnection", mongodbUri },
+      (response) => {
+        if (response && response.success) {
+          setStorageData({ mongodbUri }).then(() => {
+            updateConnectionStatus("Connection successful and saved", "success");
+            showNotification("MongoDB connection successful!", "success");
+            loadExistingGroups();
+            loadSavedTabs();
+          });
+        } else {
+          const errorMsg = `Connection failed: ${
+            response ? response.error : "Unknown error"
+          }`;
+          updateConnectionStatus(errorMsg, "error");
+          showNotification(errorMsg, "error");
+        }
+      }
+    );
+  } else {
+    // Web application mode - make direct API call
+    makeAPICall('/test-connection', { mongodbUri })
+      .then(response => {
+        if (response.success) {
+          setStorageData({ mongodbUri }).then(() => {
+            updateConnectionStatus("Connection successful and saved", "success");
+            showNotification("MongoDB connection successful!", "success");
+            loadExistingGroups();
+            loadSavedTabs();
+          });
+        } else {
+          throw new Error(response.error);
+        }
+      })
+      .catch(error => {
+        const errorMsg = `Connection failed: ${error.message}`;
         updateConnectionStatus(errorMsg, "error");
         showNotification(errorMsg, "error");
-      }
-    }
-  );
+      });
+  }
 }
 
 function handleSaveCurrentTab() {
@@ -659,20 +682,37 @@ function handleSaveCurrentTab() {
   button.innerHTML = '<i class="fas fa-spinner fa-spin fa-icon"></i>Saving...';
   button.disabled = true;
 
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs.length > 0) {
-      const notes = getCurrentNotes();
-      saveTab(tabs[0], groupName, notes, () => {
-        // Reset button state
+  // Check if we're in Chrome extension context
+  if (typeof chrome !== 'undefined' && chrome.tabs) {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        const notes = getCurrentNotes();
+        saveTab(tabs[0], groupName, notes, () => {
+          // Reset button state
+          button.innerHTML = originalHTML;
+          button.disabled = false;
+        });
+      } else {
         button.innerHTML = originalHTML;
         button.disabled = false;
-      });
-    } else {
+        showNotification("No active tab found", "error");
+      }
+    });
+  } else {
+    // Web application mode - create a mock tab for the current page
+    const mockTab = {
+      title: document.title,
+      url: window.location.href,
+      favIconUrl: document.querySelector('link[rel="icon"]')?.href || ""
+    };
+    
+    const notes = getCurrentNotes();
+    saveTab(mockTab, groupName, notes, () => {
+      // Reset button state
       button.innerHTML = originalHTML;
       button.disabled = false;
-      showNotification("No active tab found", "error");
-    }
-  });
+    });
+  }
 }
 
 function handleSaveAllTabs() {
@@ -869,19 +909,32 @@ async function saveAllTabs(tabs, groupName, notes, callback) {
 }
 
 function loadExistingGroups() {
-  chrome.storage.local.get(["mongodbUri"], (result) => {
+  getStorageData(["mongodbUri"]).then(result => {
     if (!result.mongodbUri) {
       return;
     }
 
-    chrome.runtime.sendMessage(
-      { action: "loadGroups", mongodbUri: result.mongodbUri },
-      (response) => {
-        if (response && response.success) {
-          populateGroupDropdowns(response.groups);
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage(
+        { action: "loadGroups", mongodbUri: result.mongodbUri },
+        (response) => {
+          if (response && response.success) {
+            populateGroupDropdowns(response.groups);
+          }
         }
-      }
-    );
+      );
+    } else {
+      // Web application mode
+      makeAPICall('/load-groups', { mongodbUri: result.mongodbUri })
+        .then(response => {
+          if (response.success) {
+            populateGroupDropdowns(response.groups);
+          }
+        })
+        .catch(error => {
+          console.error("Failed to load groups:", error);
+        });
+    }
   });
 }
 
@@ -1148,7 +1201,7 @@ function displayTabs(tabs) {
                  "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>"
                }" 
                alt="favicon">
-          <div class="tab-content">
+          <div class="tab-content-item">
             <div class="tab-title font-medium" title="${escapeHTML(
               tab.title
             )}" style="color: var(--text-primary);">
@@ -1218,7 +1271,11 @@ function displayTabs(tabs) {
     if (openBtn && !hasError) {
       openBtn.addEventListener("click", function () {
         const url = tabItem.getAttribute("data-tab-url");
-        chrome.tabs.create({ url: url });
+        if (typeof chrome !== 'undefined' && chrome.tabs) {
+          chrome.tabs.create({ url: url });
+        } else {
+          window.open(url, '_blank');
+        }
         showNotification("Tab opened successfully", "success");
       });
     }
@@ -1268,11 +1325,21 @@ function openAllTabsInGroup(groupName, tabs) {
     "info"
   );
 
-  validTabs.forEach((tab, index) => {
-    setTimeout(() => {
-      chrome.tabs.create({ url: tab.url, active: index === 0 });
-    }, index * 100);
-  });
+  if (typeof chrome !== 'undefined' && chrome.tabs) {
+    // Chrome extension mode
+    validTabs.forEach((tab, index) => {
+      setTimeout(() => {
+        chrome.tabs.create({ url: tab.url, active: index === 0 });
+      }, index * 100);
+    });
+  } else {
+    // Web application mode - open in new windows/tabs
+    validTabs.forEach((tab, index) => {
+      setTimeout(() => {
+        window.open(tab.url, '_blank');
+      }, index * 100);
+    });
+  }
 }
 
 function deleteTab(id) {
@@ -1439,31 +1506,58 @@ function handleAnalyzeWebpage() {
   hideAnalysisResults();
 
   // Call the background script to perform analysis
-  chrome.runtime.sendMessage(
-    {
-      action: "webAnalysis",
-      url: url,
-      query: query,
-      geminiApiKey: apiKey,
-    },
-    (response) => {
-      // Reset button state
-      button.innerHTML = originalHTML;
-      button.disabled = false;
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage(
+      {
+        action: "webAnalysis",
+        url: url,
+        query: query,
+        geminiApiKey: apiKey,
+      },
+      (response) => {
+        // Reset button state
+        button.innerHTML = originalHTML;
+        button.disabled = false;
 
-      if (response && response.success) {
-        updateAnalysisStatus("Analysis completed successfully", "success");
-        showAnalysisResults(response);
-        showNotification("Web page analysis completed!", "success");
-      } else {
-        const errorMsg = `Analysis failed: ${
-          response ? response.error : "Unknown error"
-        }`;
+        if (response && response.success) {
+          updateAnalysisStatus("Analysis completed successfully", "success");
+          showAnalysisResults(response);
+          showNotification("Web page analysis completed!", "success");
+        } else {
+          const errorMsg = `Analysis failed: ${
+            response ? response.error : "Unknown error"
+          }`;
+          updateAnalysisStatus(errorMsg, "error");
+          showNotification(errorMsg, "error");
+        }
+      }
+    );
+  } else {
+    // Web application mode - make direct API call
+    makeAPICall('/web-analysis', { url, query, geminiApiKey: apiKey })
+      .then(response => {
+        // Reset button state
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+
+        if (response.success) {
+          updateAnalysisStatus("Analysis completed successfully", "success");
+          showAnalysisResults(response);
+          showNotification("Web page analysis completed!", "success");
+        } else {
+          throw new Error(response.error);
+        }
+      })
+      .catch(error => {
+        // Reset button state
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+        
+        const errorMsg = `Analysis failed: ${error.message}`;
         updateAnalysisStatus(errorMsg, "error");
         showNotification(errorMsg, "error");
-      }
-    }
-  );
+      });
+  }
 }
 
 function updateAnalysisStatus(message, type) {
@@ -1599,4 +1693,370 @@ async function handleCheckRobots() {
     button.innerHTML = originalHTML;
     button.disabled = false;
   }
+}
+
+async function handleCreateTask() {
+  const url = document.getElementById("task-url").value.trim();
+  const taskDescription = document.getElementById("task-description").value.trim();
+  const schedulePreset = document.getElementById("schedule-preset").value;
+  const cronExpression = document.getElementById("cron-expression").value.trim();
+  const geminiApiKey = document.getElementById("task-gemini-api-key").value.trim();
+
+  // Validation
+  if (!url || !taskDescription || !geminiApiKey) {
+    showNotification("Please fill in all required fields", "error");
+    return;
+  }
+
+  const finalCronExpression = schedulePreset === "custom" ? cronExpression : schedulePreset;
+  if (!finalCronExpression) {
+    showNotification("Please select a schedule or enter a custom cron expression", "error");
+    return;
+  }
+
+  try {
+    new URL(url);
+  } catch (error) {
+    showNotification("Please enter a valid URL", "error");
+    return;
+  }
+
+  const button = document.getElementById("create-task");
+  const originalHTML = button.innerHTML;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin fa-icon"></i>Creating...';
+  button.disabled = true;
+
+  try {
+    const mongodbUri = document.getElementById("mongodb-uri").value.trim();
+    if (!mongodbUri) {
+      showNotification("Please set up MongoDB connection first", "error");
+      return;
+    }
+
+    const taskData = {
+      url,
+      taskDescription,
+      cronExpression: finalCronExpression,
+      geminiApiKey,
+      name: `Task for ${new URL(url).hostname}`,
+      mongodbUri
+    };
+
+    const response = await makeAPICall('/create-scheduled-task', { mongodbUri, taskData });
+    
+    if (response.success) {
+      showNotification("Scheduled task created successfully!", "success");
+      
+      // Clear form
+      document.getElementById("task-url").value = "";
+      document.getElementById("task-description").value = "";
+      document.getElementById("task-gemini-api-key").value = "";
+      document.getElementById("schedule-preset").value = "";
+      document.getElementById("cron-expression").value = "";
+      document.getElementById("cron-expression").classList.add("hidden");
+      document.getElementById("robots-status").innerHTML = "";
+      document.getElementById("create-task").disabled = true;
+      
+      // Refresh tasks list
+      loadScheduledTasks();
+      updateTaskOverview();
+    } else {
+      throw new Error(response.error);
+    }
+  } catch (error) {
+    showNotification("Failed to create task: " + error.message, "error");
+  } finally {
+    button.innerHTML = originalHTML;
+    button.disabled = false;
+  }
+}
+
+async function loadScheduledTasks() {
+  try {
+    const mongodbUri = document.getElementById("mongodb-uri").value.trim();
+    if (!mongodbUri) {
+      return;
+    }
+
+    const response = await makeAPICall('/load-scheduled-tasks', { mongodbUri });
+    
+    if (response.success) {
+      displayScheduledTasks(response.tasks);
+      updateTaskOverview(response.tasks);
+      populateTaskFilter(response.tasks);
+    }
+  } catch (error) {
+    console.error("Failed to load scheduled tasks:", error);
+  }
+}
+
+function displayScheduledTasks(tasks) {
+  const tasksListEl = document.getElementById("scheduled-tasks-list");
+  
+  if (!tasks || tasks.length === 0) {
+    tasksListEl.innerHTML = `
+      <div class="text-center py-6" style="color: var(--text-muted);">
+        <i class="fas fa-clock fa-2x mb-2"></i>
+        <div>No scheduled tasks found</div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = "";
+  tasks.forEach((task) => {
+    const statusColor = task.status === 'active' ? 'var(--accent-green)' : 
+                       task.status === 'paused' ? 'var(--accent-yellow)' : 'var(--accent-red)';
+    
+    const nextExecution = task.nextExecution ? new Date(task.nextExecution).toLocaleString() : 'N/A';
+    const lastExecuted = task.lastExecuted ? new Date(task.lastExecuted).toLocaleString() : 'Never';
+    
+    html += `
+      <div class="border rounded-md p-4 mb-3" style="border-color: var(--border-color); background-color: var(--bg-secondary);">
+        <div class="flex justify-between items-start mb-3">
+          <div class="flex-1">
+            <h4 class="font-semibold text-sm mb-1" style="color: var(--text-primary);">
+              <i class="fas fa-globe fa-icon"></i>${escapeHTML(new URL(task.url).hostname)}
+            </h4>
+            <p class="text-xs mb-2" style="color: var(--text-secondary);">${escapeHTML(task.taskDescription)}</p>
+            <div class="text-xs" style="color: var(--text-muted);">
+              <i class="fas fa-clock fa-icon"></i>Schedule: ${escapeHTML(task.cronExpression)} | 
+              <i class="fas fa-circle fa-icon" style="color: ${statusColor};"></i>Status: ${task.status} | 
+              Executions: ${task.executionCount || 0} (${task.successCount || 0} success, ${task.errorCount || 0} errors)
+            </div>
+          </div>
+          <div class="flex gap-2 ml-4">
+            ${task.status === 'active' ? 
+              `<button class="pause-task-btn text-xs px-2 py-1 rounded" 
+                       style="background-color: var(--accent-yellow); color: white;"
+                       data-task-id="${task._id}">
+                 <i class="fas fa-pause fa-icon"></i>Pause
+               </button>` :
+              `<button class="resume-task-btn text-xs px-2 py-1 rounded" 
+                       style="background-color: var(--accent-green); color: white;"
+                       data-task-id="${task._id}">
+                 <i class="fas fa-play fa-icon"></i>Resume
+               </button>`
+            }
+            <button class="delete-task-btn text-xs px-2 py-1 rounded" 
+                    style="background-color: var(--accent-red); color: white;"
+                    data-task-id="${task._id}">
+              <i class="fas fa-trash fa-icon"></i>Delete
+            </button>
+          </div>
+        </div>
+        <div class="text-xs pt-2 border-t" style="border-color: var(--border-color); color: var(--text-muted);">
+          Next: ${nextExecution} | Last: ${lastExecuted}
+        </div>
+      </div>
+    `;
+  });
+
+  tasksListEl.innerHTML = html;
+
+  // Add event listeners
+  document.querySelectorAll('.pause-task-btn').forEach(btn => {
+    btn.addEventListener('click', () => pauseTask(btn.dataset.taskId));
+  });
+  
+  document.querySelectorAll('.resume-task-btn').forEach(btn => {
+    btn.addEventListener('click', () => resumeTask(btn.dataset.taskId));
+  });
+  
+  document.querySelectorAll('.delete-task-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteScheduledTask(btn.dataset.taskId));
+  });
+}
+
+async function pauseTask(taskId) {
+  try {
+    const mongodbUri = document.getElementById("mongodb-uri").value.trim();
+    const response = await makeAPICall('/pause-scheduled-task', { mongodbUri, taskId });
+    
+    if (response.success) {
+      showNotification("Task paused successfully", "success");
+      loadScheduledTasks();
+    } else {
+      throw new Error(response.error);
+    }
+  } catch (error) {
+    showNotification("Failed to pause task: " + error.message, "error");
+  }
+}
+
+async function resumeTask(taskId) {
+  try {
+    const mongodbUri = document.getElementById("mongodb-uri").value.trim();
+    const response = await makeAPICall('/resume-scheduled-task', { mongodbUri, taskId });
+    
+    if (response.success) {
+      showNotification("Task resumed successfully", "success");
+      loadScheduledTasks();
+    } else {
+      throw new Error(response.error);
+    }
+  } catch (error) {
+    showNotification("Failed to resume task: " + error.message, "error");
+  }
+}
+
+async function deleteScheduledTask(taskId) {
+  if (!confirm("Are you sure you want to delete this task? This will also delete all related results.")) {
+    return;
+  }
+  
+  try {
+    const mongodbUri = document.getElementById("mongodb-uri").value.trim();
+    const response = await makeAPICall('/delete-scheduled-task', { mongodbUri, taskId });
+    
+    if (response.success) {
+      showNotification("Task deleted successfully", "success");
+      loadScheduledTasks();
+      loadTaskResults();
+    } else {
+      throw new Error(response.error);
+    }
+  } catch (error) {
+    showNotification("Failed to delete task: " + error.message, "error");
+  }
+}
+
+function updateTaskOverview(tasks = []) {
+  const overviewEl = document.getElementById("task-overview");
+  
+  if (tasks.length === 0) {
+    overviewEl.innerHTML = `
+      <div class="text-center py-4" style="color: var(--text-muted);">
+        <i class="fas fa-tasks fa-2x mb-2"></i>
+        <div>No scheduled tasks yet</div>
+      </div>
+    `;
+    return;
+  }
+
+  const active = tasks.filter(t => t.status === 'active').length;
+  const paused = tasks.filter(t => t.status === 'paused').length;
+  const totalExecutions = tasks.reduce((sum, t) => sum + (t.executionCount || 0), 0);
+  const totalSuccesses = tasks.reduce((sum, t) => sum + (t.successCount || 0), 0);
+
+  overviewEl.innerHTML = `
+    <div class="space-y-2">
+      <div class="flex justify-between">
+        <span style="color: var(--text-secondary);">Total Tasks:</span>
+        <span style="color: var(--text-primary); font-weight: 500;">${tasks.length}</span>
+      </div>
+      <div class="flex justify-between">
+        <span style="color: var(--text-secondary);">Active:</span>
+        <span style="color: var(--accent-green); font-weight: 500;">${active}</span>
+      </div>
+      <div class="flex justify-between">
+        <span style="color: var(--text-secondary);">Paused:</span>
+        <span style="color: var(--accent-yellow); font-weight: 500;">${paused}</span>
+      </div>
+      <div class="flex justify-between">
+        <span style="color: var(--text-secondary);">Total Executions:</span>
+        <span style="color: var(--text-primary); font-weight: 500;">${totalExecutions}</span>
+      </div>
+      <div class="flex justify-between">
+        <span style="color: var(--text-secondary);">Success Rate:</span>
+        <span style="color: var(--accent-green); font-weight: 500;">${totalExecutions > 0 ? Math.round((totalSuccesses / totalExecutions) * 100) : 0}%</span>
+      </div>
+    </div>
+  `;
+}
+
+function populateTaskFilter(tasks) {
+  const filterEl = document.getElementById("task-filter");
+  const currentValue = filterEl.value;
+  
+  filterEl.innerHTML = '<option value="">All tasks</option>';
+  
+  tasks.forEach(task => {
+    const option = document.createElement("option");
+    option.value = task._id;
+    option.textContent = `${new URL(task.url).hostname} - ${task.taskDescription.substring(0, 30)}...`;
+    filterEl.appendChild(option);
+  });
+  
+  if (currentValue) {
+    filterEl.value = currentValue;
+  }
+}
+
+async function loadTaskResults() {
+  try {
+    const mongodbUri = document.getElementById("mongodb-uri").value.trim();
+    const taskId = document.getElementById("task-filter").value;
+    
+    if (!mongodbUri) {
+      return;
+    }
+
+    const response = await makeAPICall('/load-task-results', { mongodbUri, taskId });
+    
+    if (response.success) {
+      displayTaskResults(response.results);
+    }
+  } catch (error) {
+    console.error("Failed to load task results:", error);
+  }
+}
+
+function displayTaskResults(results) {
+  const resultsListEl = document.getElementById("task-results-list");
+  
+  if (!results || results.length === 0) {
+    resultsListEl.innerHTML = `
+      <div class="text-center py-6" style="color: var(--text-muted);">
+        <i class="fas fa-chart-line fa-2x mb-2"></i>
+        <div>No task results found</div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = "";
+  results.forEach((result) => {
+    const statusColor = result.status === 'success' ? 'var(--accent-green)' : 'var(--accent-red)';
+    const executedAt = new Date(result.executedAt).toLocaleString();
+    
+    html += `
+      <div class="border rounded-md p-4 mb-3" style="border-color: var(--border-color); background-color: var(--bg-secondary);">
+        <div class="flex justify-between items-start mb-3">
+          <div class="flex-1">
+            <h4 class="font-semibold text-sm mb-1" style="color: var(--text-primary);">
+              <i class="fas fa-globe fa-icon"></i>${escapeHTML(new URL(result.url).hostname)}
+            </h4>
+            <p class="text-xs mb-2" style="color: var(--text-secondary);">${escapeHTML(result.taskDescription)}</p>
+            <div class="text-xs mb-2" style="color: var(--text-muted);">
+              <i class="fas fa-clock fa-icon"></i>Executed: ${executedAt} | 
+              <i class="fas fa-circle fa-icon" style="color: ${statusColor};"></i>Status: ${result.status}
+            </div>
+          </div>
+        </div>
+        ${result.status === 'success' && result.result ? `
+          <div class="bg-tertiary border rounded p-3 mt-3" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+            <h5 class="font-semibold text-xs mb-2" style="color: var(--text-primary);">
+              <i class="fas fa-lightbulb fa-icon"></i>Analysis Result:
+            </h5>
+            <div class="text-xs" style="color: var(--text-secondary); white-space: pre-wrap; max-height: 200px; overflow-y: auto;">
+              ${escapeHTML(result.result.analysis)}
+            </div>
+          </div>
+        ` : ''}
+        ${result.status === 'error' ? `
+          <div class="bg-red-100 border border-red-300 rounded p-3 mt-3" style="background-color: rgba(239, 68, 68, 0.1); border-color: var(--accent-red);">
+            <h5 class="font-semibold text-xs mb-2" style="color: var(--accent-red);">
+              <i class="fas fa-exclamation-triangle fa-icon"></i>Error:
+            </h5>
+            <div class="text-xs" style="color: var(--accent-red);">
+              ${escapeHTML(result.error)}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  });
+
+  resultsListEl.innerHTML = html;
 }
