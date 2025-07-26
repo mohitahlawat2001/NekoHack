@@ -14,8 +14,16 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 
-// Root endpoint - THIS IS CRUCIAL FOR VERCEL
+// Serve static files (CSS, JS, images, etc.)
+app.use(express.static(__dirname));
+
+// Root endpoint - Serve the main UI
 app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/popup.html');
+});
+
+// API info endpoint (moved from root)
+app.get('/api', (req, res) => {
   res.json({ 
     message: 'Tab Saver API is running!',
     timestamp: '2025-06-22 03:30:01',
@@ -24,6 +32,7 @@ app.get('/', (req, res) => {
     status: 'healthy',
     endpoints: [
       'GET /',
+      'GET /api',
       'GET /health',
       'POST /test-connection',
       'POST /save-tab',
@@ -294,6 +303,14 @@ app.post('/delete-group', async (req, res) => {
     }
   }
 });
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 // IMPORTANT: Export the app for Vercel
 module.exports = app;
