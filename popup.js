@@ -14,36 +14,104 @@ document.addEventListener("DOMContentLoaded", () => {
   ).placeholder = `Enter new group name (default: ${today})`;
   updateCurrentGroupDisplay();
 
-  // Load stored data from storage
-  chrome.storage.local.get(
-    ["mongodbUri", "hasSecretKey", "secretKeyDisplay"],
-    (result) => {
-      if (result.mongodbUri) {
-        document.getElementById("mongodb-uri").value = result.mongodbUri;
-        updateConnectionStatus("Connection saved", "success");
-      }
+  // Initialize tab navigation
+  initializeTabNavigation();
 
-      if (result.hasSecretKey && result.secretKeyDisplay) {
-        currentSecretKey = result.secretKeyDisplay;
-        showCurrentKeySection();
-        updateCurrentKeyDisplay();
-        updateEncryptionStatus(
-          "Secret key is set - data will be encrypted",
-          "success"
-        );
-        loadExistingGroups();
-        loadSavedTabs();
-      } else {
-        hideCurrentKeySection();
-        updateEncryptionStatus(
-          "No secret key set - data will be stored unencrypted",
-          "warning"
-        );
-      }
-    }
-  );
+  // Load stored data from storage
+  loadStoredData();
 
   // Event listeners
+  setupEventListeners();
+});
+
+// Tab Navigation Functions
+function initializeTabNavigation() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetTab = button.getAttribute('data-tab');
+      
+      // Remove active class from all buttons and contents
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Add active class to clicked button and corresponding content
+      button.classList.add('active');
+      document.getElementById(targetTab).classList.add('active');
+      
+      // Load data for specific tabs when they become active
+      if (targetTab === 'scheduled-tasks') {
+        loadScheduledTasks();
+        loadTaskResults();
+      }
+    });
+  });
+}
+
+function loadStoredData() {
+  // Check if we're running in a Chrome extension context
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    chrome.storage.local.get(
+      ["mongodbUri", "hasSecretKey", "secretKeyDisplay"],
+      (result) => {
+        if (result.mongodbUri) {
+          document.getElementById("mongodb-uri").value = result.mongodbUri;
+          updateConnectionStatus("Connection saved", "success");
+        }
+
+        if (result.hasSecretKey && result.secretKeyDisplay) {
+          currentSecretKey = result.secretKeyDisplay;
+          showCurrentKeySection();
+          updateCurrentKeyDisplay();
+          updateEncryptionStatus(
+            "Secret key is set - data will be encrypted",
+            "success"
+          );
+          loadExistingGroups();
+          loadSavedTabs();
+        } else {
+          hideCurrentKeySection();
+          updateEncryptionStatus(
+            "No secret key set - data will be stored unencrypted",
+            "warning"
+          );
+        }
+      }
+    );
+  } else {
+    // Running as web application - use localStorage instead
+    const mongodbUri = localStorage.getItem('mongodbUri');
+    const hasSecretKey = localStorage.getItem('hasSecretKey');
+    const secretKeyDisplay = localStorage.getItem('secretKeyDisplay');
+    
+    if (mongodbUri) {
+      document.getElementById("mongodb-uri").value = mongodbUri;
+      updateConnectionStatus("Connection saved", "success");
+    }
+
+    if (hasSecretKey && secretKeyDisplay) {
+      currentSecretKey = secretKeyDisplay;
+      showCurrentKeySection();
+      updateCurrentKeyDisplay();
+      updateEncryptionStatus(
+        "Secret key is set - data will be encrypted",
+        "success"
+      );
+      loadExistingGroups();
+      loadSavedTabs();
+    } else {
+      hideCurrentKeySection();
+      updateEncryptionStatus(
+        "No secret key set - data will be stored unencrypted",
+        "warning"
+      );
+    }
+  }
+}
+
+function setupEventListeners() {
   document
     .getElementById("save-connection")
     .addEventListener("click", handleSaveConnection);
@@ -71,6 +139,31 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("analyze-webpage")
     .addEventListener("click", handleAnalyzeWebpage);
+  
+  // Scheduled tasks event listeners
+  document
+    .getElementById("schedule-preset")
+    .addEventListener("change", handleSchedulePresetChange);
+  document
+    .getElementById("toggle-task-gemini-key-visibility")
+    .addEventListener("click", toggleTaskGeminiKeyVisibility);
+  document
+    .getElementById("check-robots")
+    .addEventListener("click", handleCheckRobots);
+  document
+    .getElementById("create-task")
+    .addEventListener("click", handleCreateTask);
+  document
+    .getElementById("refresh-tasks")
+    .addEventListener("click", loadScheduledTasks);
+  document
+    .getElementById("refresh-results")
+    .addEventListener("click", loadTaskResults);
+  document
+    .getElementById("task-filter")
+    .addEventListener("change", loadTaskResults);
+    
+  // Tab management event listeners
   document
     .getElementById("save-current-tab")
     .addEventListener("click", handleSaveCurrentTab);
@@ -110,7 +203,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("search-bar")
     .addEventListener("input", handleSearch);
-});
+}
 
 // Encryption Functions
 async function encryptData(data, secretKey) {
@@ -190,9 +283,53 @@ async function decryptData(encryptedData, secretKey) {
 
 function getStoredSecretKey() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["secretKey"], (result) => {
-      resolve(result.secretKey || null);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.get(["secretKey"], (result) => {
+        resolve(result.secretKey || null);
+      });
+    } else {
+      resolve(localStorage.getItem('secretKey') || null);
+    }
+  });
+}
+
+function setStorageData(data) {
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    return new Promise((resolve) => {
+      chrome.storage.local.set(data, resolve);
     });
+  } else {
+    Object.keys(data).forEach(key => {
+      localStorage.setItem(key, data[key]);
+    });
+    return Promise.resolve();
+  }
+}
+
+function getStorageData(keys) {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.get(keys, resolve);
+    } else {
+      const result = {};
+      keys.forEach(key => {
+        result[key] = localStorage.getItem(key);
+      });
+      resolve(result);
+    }
+  });
+}
+
+function removeStorageData(keys) {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.remove(keys, resolve);
+    } else {
+      keys.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      resolve();
+    }
   });
 }
 
@@ -284,25 +421,22 @@ function handleSaveSecretKey() {
   const hashedKey = btoa(secretKey + "tab-saver-salt"); // Simple hash with salt
   currentSecretKey = secretKey;
 
-  chrome.storage.local.set(
-    {
-      secretKey: hashedKey,
-      secretKeyDisplay: secretKey, // Store for display purposes
-      hasSecretKey: true,
-    },
-    () => {
-      showCurrentKeySection();
-      updateCurrentKeyDisplay();
-      updateEncryptionStatus(
-        "Secret key saved - data will be encrypted",
-        "success"
-      );
-      showNotification("Secret key saved successfully!", "success");
+  setStorageData({
+    secretKey: hashedKey,
+    secretKeyDisplay: secretKey, // Store for display purposes
+    hasSecretKey: true,
+  }).then(() => {
+    showCurrentKeySection();
+    updateCurrentKeyDisplay();
+    updateEncryptionStatus(
+      "Secret key saved - data will be encrypted",
+      "success"
+    );
+    showNotification("Secret key saved successfully!", "success");
 
-      loadExistingGroups();
-      loadSavedTabs();
-    }
-  );
+    loadExistingGroups();
+    loadSavedTabs();
+  });
 }
 
 function handleUpdateSecretKey() {
@@ -322,42 +456,40 @@ function handleUpdateSecretKey() {
   const hashedKey = btoa(secretKey + "tab-saver-salt");
   currentSecretKey = secretKey;
 
-  chrome.storage.local.set(
-    {
-      secretKey: hashedKey,
-      secretKeyDisplay: secretKey,
-      hasSecretKey: true,
-    },
-    () => {
-      updateCurrentKeyDisplay();
-      updateEncryptionStatus(
-        "Secret key updated - data will be encrypted with new key",
-        "success"
-      );
-      showNotification("Secret key updated successfully!", "success");
+  setStorageData({
+    secretKey: hashedKey,
+    secretKeyDisplay: secretKey,
+    hasSecretKey: true,
+  }).then(() => {
+    updateCurrentKeyDisplay();
+    updateEncryptionStatus(
+      "Secret key updated - data will be encrypted with new key",
+      "success"
+    );
+    showNotification("Secret key updated successfully!", "success");
 
-      loadExistingGroups();
-      loadSavedTabs();
-    }
-  );
+    loadExistingGroups();
+    loadSavedTabs();
+  });
 }
 
 function handleClearSecretKey() {
-  chrome.storage.local.remove(
-    ["secretKey", "secretKeyDisplay", "hasSecretKey"],
-    () => {
-      currentSecretKey = "";
-      hideCurrentKeySection();
-      updateEncryptionStatus(
-        "No secret key set - data will be stored unencrypted",
-        "warning"
-      );
-      showNotification("Secret key cleared", "info");
-      document.getElementById("secret-key").value = "";
-      loadExistingGroups();
-      loadSavedTabs();
-    }
-  );
+  removeStorageData([
+    "secretKey",
+    "secretKeyDisplay", 
+    "hasSecretKey"
+  ]).then(() => {
+    currentSecretKey = "";
+    hideCurrentKeySection();
+    updateEncryptionStatus(
+      "No secret key set - data will be stored unencrypted",
+      "warning"
+    );
+    showNotification("Secret key cleared", "info");
+    document.getElementById("secret-key").value = "";
+    loadExistingGroups();
+    loadSavedTabs();
+  });
 }
 
 function updateEncryptionStatus(message, type) {
@@ -1370,4 +1502,101 @@ function showAnalysisResults(response) {
 function hideAnalysisResults() {
   const resultsDiv = document.getElementById("analysis-results");
   resultsDiv.classList.add("hidden");
+}
+
+// API calling helper functions
+function makeAPICall(endpoint, data = {}) {
+  const API_BASE_URL = window.location.origin; // Use current origin for web app
+  
+  return fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  });
+}
+
+// Scheduled Tasks Functions
+function handleSchedulePresetChange() {
+  const preset = document.getElementById("schedule-preset").value;
+  const customInput = document.getElementById("cron-expression");
+  
+  if (preset === "custom") {
+    customInput.classList.remove("hidden");
+    customInput.focus();
+  } else {
+    customInput.classList.add("hidden");
+    customInput.value = preset;
+  }
+}
+
+function toggleTaskGeminiKeyVisibility() {
+  const keyInput = document.getElementById("task-gemini-api-key");
+  const toggleIcon = document.getElementById("toggle-task-gemini-key-visibility");
+
+  if (keyInput.type === "password") {
+    keyInput.type = "text";
+    toggleIcon.className = "fas fa-eye-slash password-toggle";
+    toggleIcon.title = "Hide API key";
+  } else {
+    keyInput.type = "password";
+    toggleIcon.className = "fas fa-eye password-toggle";
+    toggleIcon.title = "Show API key";
+  }
+}
+
+async function handleCheckRobots() {
+  const url = document.getElementById("task-url").value.trim();
+  
+  if (!url) {
+    showNotification("Please enter a URL first", "error");
+    return;
+  }
+
+  try {
+    new URL(url); // Validate URL format
+  } catch (error) {
+    showNotification("Please enter a valid URL", "error");
+    return;
+  }
+
+  const button = document.getElementById("check-robots");
+  const originalHTML = button.innerHTML;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin fa-icon"></i>Checking...';
+  button.disabled = true;
+
+  try {
+    const response = await makeAPICall('/check-robots', { url });
+    
+    if (response.success) {
+      const statusEl = document.getElementById("robots-status");
+      if (response.scrapingAllowed) {
+        statusEl.innerHTML = `<i class="fas fa-check-circle fa-icon" style="color: var(--accent-green);"></i>${response.message}`;
+        statusEl.style.color = "var(--accent-green)";
+        document.getElementById("create-task").disabled = false;
+      } else {
+        statusEl.innerHTML = `<i class="fas fa-times-circle fa-icon" style="color: var(--accent-red);"></i>${response.message}`;
+        statusEl.style.color = "var(--accent-red)";
+        document.getElementById("create-task").disabled = true;
+      }
+      showNotification(`Robots.txt check: ${response.message}`, response.scrapingAllowed ? "success" : "warning");
+    } else {
+      throw new Error(response.error);
+    }
+  } catch (error) {
+    const statusEl = document.getElementById("robots-status");
+    statusEl.innerHTML = `<i class="fas fa-exclamation-triangle fa-icon" style="color: var(--accent-yellow);"></i>Check failed: ${error.message}`;
+    statusEl.style.color = "var(--accent-yellow)";
+    showNotification("Robots.txt check failed: " + error.message, "error");
+  } finally {
+    button.innerHTML = originalHTML;
+    button.disabled = false;
+  }
 }

@@ -18,7 +18,9 @@
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
     "@google/generative-ai": "^0.2.1",
-    "jsdom": "^23.0.1"
+    "jsdom": "^23.0.1",
+    "node-cron": "^3.0.3",
+    "robots-parser": "^3.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

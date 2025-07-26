@@ -5,6 +5,9 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { JSDOM } = require('jsdom');
+const cron = require('node-cron');
+const robotsParser = require('robots-parser');
+const path = require('path');
 
 const app = express();
 
@@ -18,16 +21,32 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 
-// Root endpoint - THIS IS CRUCIAL FOR VERCEL
+// Serve static files from the current directory
+app.use(express.static(__dirname));
+
+// Root endpoint - Serve the web application
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'popup.html'));
+});
+
+// API info endpoint
+app.get('/api', (req, res) => {
   res.json({ 
-    message: 'Tab Saver API is running!',
+    message: 'NekoHack - AI Scheduled Task Service API',
     timestamp: '2025-06-22 03:30:01',
-    version: '1.0.0',
+    version: '2.0.0',
     author: 'mohitahlawat2001',
     status: 'healthy',
+    features: [
+      'Tab Management',
+      'Web Analysis',
+      'AI Scheduled Tasks',
+      'Robots.txt Validation',
+      'Task Automation'
+    ],
     endpoints: [
       'GET /',
+      'GET /api',
       'GET /health',
       'POST /test-connection',
       'POST /save-tab',
@@ -36,7 +55,15 @@ app.get('/', (req, res) => {
       'POST /load-groups',
       'POST /delete-tab',
       'POST /delete-group',
-      'POST /web-analysis'
+      'POST /web-analysis',
+      'POST /check-robots',
+      'POST /create-scheduled-task',
+      'POST /load-scheduled-tasks',
+      'POST /update-scheduled-task',
+      'POST /delete-scheduled-task',
+      'POST /pause-scheduled-task',
+      'POST /resume-scheduled-task',
+      'POST /load-task-results'
     ]
   });
 });
@@ -45,9 +72,22 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
     timestamp: '2025-06-22 03:30:01',
-    user: 'mohitahlawat2001'
+    user: 'mohitahlawat2001',
+    scheduledTasks: Object.keys(scheduledTasks).length
   });
 });
+
+// Store for scheduled tasks
+const scheduledTasks = {};
+
+// Helper function to validate cron expression
+function isValidCronExpression(cronExpression) {
+  try {
+    return cron.validate(cronExpression);
+  } catch (error) {
+    return false;
+  }
+}
 
 // Test MongoDB connection
 app.post('/test-connection', async (req, res) => {
@@ -300,6 +340,39 @@ app.post('/delete-group', async (req, res) => {
   }
 });
 
+// Check robots.txt endpoint
+app.post('/check-robots', async (req, res) => {
+  const { url } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'URL is required' });
+  }
+
+  try {
+    const validatedUrl = validateUrl(url);
+    if (!validatedUrl) {
+      return res.status(400).json({ success: false, error: 'Invalid URL provided' });
+    }
+
+    const isAllowed = await checkRobotsPermission(validatedUrl);
+    
+    return res.json({
+      success: true,
+      url: validatedUrl,
+      scrapingAllowed: isAllowed.allowed,
+      robotsUrl: isAllowed.robotsUrl,
+      message: isAllowed.message
+    });
+    
+  } catch (error) {
+    console.error('Robots.txt check failed:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // Web Analysis endpoint
 app.post('/web-analysis', async (req, res) => {
   const { url, query, geminiApiKey } = req.body;
@@ -346,6 +419,292 @@ app.post('/web-analysis', async (req, res) => {
       success: false, 
       error: error.message 
     });
+  }
+});
+
+// Create scheduled task endpoint
+app.post('/create-scheduled-task', async (req, res) => {
+  const { mongodbUri, taskData } = req.body;
+  
+  if (!mongodbUri || !taskData) {
+    return res.status(400).json({ success: false, error: 'MongoDB URI and task data are required' });
+  }
+
+  const { url, taskDescription, cronExpression, geminiApiKey } = taskData;
+  
+  if (!url || !taskDescription || !cronExpression || !geminiApiKey) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'URL, task description, cron expression, and Gemini API key are required' 
+    });
+  }
+
+  if (!isValidCronExpression(cronExpression)) {
+    return res.status(400).json({ success: false, error: 'Invalid cron expression' });
+  }
+
+  let client;
+  try {
+    // First check if the site allows scraping
+    const robotsCheck = await checkRobotsPermission(url);
+    if (!robotsCheck.allowed) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Scraping not allowed for this site: ${robotsCheck.message}` 
+      });
+    }
+
+    client = new MongoClient(mongodbUri);
+    await client.connect();
+    
+    const db = client.db('tabsaver');
+    const task = {
+      ...taskData,
+      status: 'active',
+      createdAt: new Date('2025-06-22T03:30:01Z'),
+      updatedAt: new Date('2025-06-22T03:30:01Z'),
+      lastExecuted: null,
+      nextExecution: getNextExecutionTime(cronExpression),
+      executionCount: 0,
+      successCount: 0,
+      errorCount: 0
+    };
+    
+    const result = await db.collection('scheduled_tasks').insertOne(task);
+    
+    // Start the cron job
+    startScheduledTask(result.insertedId.toString(), task);
+    
+    return res.json({ 
+      success: true, 
+      taskId: result.insertedId,
+      message: 'Scheduled task created successfully',
+      nextExecution: task.nextExecution
+    });
+  } catch (error) {
+    console.error('Create scheduled task failed:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+});
+
+// Load scheduled tasks endpoint
+app.post('/load-scheduled-tasks', async (req, res) => {
+  const { mongodbUri } = req.body;
+  
+  if (!mongodbUri) {
+    return res.status(400).json({ success: false, error: 'MongoDB URI is required' });
+  }
+
+  let client;
+  try {
+    client = new MongoClient(mongodbUri);
+    await client.connect();
+    
+    const db = client.db('tabsaver');
+    const tasks = await db.collection('scheduled_tasks')
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    return res.json({ 
+      success: true, 
+      tasks,
+      count: tasks.length
+    });
+  } catch (error) {
+    console.error('Load scheduled tasks failed:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+});
+
+// Delete scheduled task endpoint
+app.post('/delete-scheduled-task', async (req, res) => {
+  const { mongodbUri, taskId } = req.body;
+  
+  if (!mongodbUri || !taskId) {
+    return res.status(400).json({ success: false, error: 'MongoDB URI and task ID are required' });
+  }
+
+  let client;
+  try {
+    client = new MongoClient(mongodbUri);
+    await client.connect();
+    
+    const db = client.db('tabsaver');
+    const result = await db.collection('scheduled_tasks').deleteOne({ _id: new ObjectId(taskId) });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, error: 'Task not found' });
+    }
+    
+    // Stop the cron job
+    if (scheduledTasks[taskId]) {
+      scheduledTasks[taskId].destroy();
+      delete scheduledTasks[taskId];
+    }
+    
+    // Also delete related task results
+    await db.collection('task_results').deleteMany({ taskId: new ObjectId(taskId) });
+    
+    return res.json({ 
+      success: true,
+      message: 'Task deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete scheduled task failed:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+});
+
+// Pause scheduled task endpoint
+app.post('/pause-scheduled-task', async (req, res) => {
+  const { mongodbUri, taskId } = req.body;
+  
+  if (!mongodbUri || !taskId) {
+    return res.status(400).json({ success: false, error: 'MongoDB URI and task ID are required' });
+  }
+
+  let client;
+  try {
+    client = new MongoClient(mongodbUri);
+    await client.connect();
+    
+    const db = client.db('tabsaver');
+    const result = await db.collection('scheduled_tasks').updateOne(
+      { _id: new ObjectId(taskId) },
+      { 
+        $set: { 
+          status: 'paused', 
+          updatedAt: new Date('2025-06-22T03:30:01Z') 
+        } 
+      }
+    );
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, error: 'Task not found' });
+    }
+    
+    // Stop the cron job
+    if (scheduledTasks[taskId]) {
+      scheduledTasks[taskId].destroy();
+      delete scheduledTasks[taskId];
+    }
+    
+    return res.json({ 
+      success: true,
+      message: 'Task paused successfully'
+    });
+  } catch (error) {
+    console.error('Pause scheduled task failed:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+});
+
+// Resume scheduled task endpoint
+app.post('/resume-scheduled-task', async (req, res) => {
+  const { mongodbUri, taskId } = req.body;
+  
+  if (!mongodbUri || !taskId) {
+    return res.status(400).json({ success: false, error: 'MongoDB URI and task ID are required' });
+  }
+
+  let client;
+  try {
+    client = new MongoClient(mongodbUri);
+    await client.connect();
+    
+    const db = client.db('tabsaver');
+    const task = await db.collection('scheduled_tasks').findOne({ _id: new ObjectId(taskId) });
+    
+    if (!task) {
+      return res.status(404).json({ success: false, error: 'Task not found' });
+    }
+    
+    const result = await db.collection('scheduled_tasks').updateOne(
+      { _id: new ObjectId(taskId) },
+      { 
+        $set: { 
+          status: 'active', 
+          updatedAt: new Date('2025-06-22T03:30:01Z'),
+          nextExecution: getNextExecutionTime(task.cronExpression)
+        } 
+      }
+    );
+    
+    // Restart the cron job
+    const updatedTask = await db.collection('scheduled_tasks').findOne({ _id: new ObjectId(taskId) });
+    if (updatedTask) {
+      startScheduledTask(taskId, updatedTask);
+    }
+    
+    return res.json({ 
+      success: true,
+      message: 'Task resumed successfully'
+    });
+  } catch (error) {
+    console.error('Resume scheduled task failed:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+});
+
+// Load task results endpoint
+app.post('/load-task-results', async (req, res) => {
+  const { mongodbUri, taskId, limit = 50 } = req.body;
+  
+  if (!mongodbUri) {
+    return res.status(400).json({ success: false, error: 'MongoDB URI is required' });
+  }
+
+  let client;
+  try {
+    client = new MongoClient(mongodbUri);
+    await client.connect();
+    
+    const db = client.db('tabsaver');
+    let query = {};
+    
+    if (taskId) {
+      query.taskId = new ObjectId(taskId);
+    }
+    
+    const results = await db.collection('task_results')
+      .find(query)
+      .sort({ executedAt: -1 })
+      .limit(parseInt(limit))
+      .toArray();
+    
+    return res.json({ 
+      success: true, 
+      results,
+      count: results.length
+    });
+  } catch (error) {
+    console.error('Load task results failed:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 });
 
@@ -504,6 +863,172 @@ function truncateContent(content) {
   const lastPart = content.substring(content.length - maxLength / 2);
   
   return `${firstPart}\n\n[...Content truncated due to length...]\n\n${lastPart}`;
+}
+
+// Helper functions for scheduled tasks
+async function checkRobotsPermission(url) {
+  try {
+    const urlObj = new URL(url);
+    const robotsUrl = `${urlObj.protocol}//${urlObj.host}/robots.txt`;
+    
+    const response = await axios.get(robotsUrl, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'NekoHack-Scheduler/1.0.0'
+      }
+    });
+    
+    const robots = robotsParser(robotsUrl, response.data);
+    const isAllowed = robots.isAllowed(url, 'NekoHack-Scheduler');
+    
+    return {
+      allowed: isAllowed,
+      robotsUrl: robotsUrl,
+      message: isAllowed ? 'Scraping allowed by robots.txt' : 'Scraping disallowed by robots.txt'
+    };
+  } catch (error) {
+    // If robots.txt doesn't exist or is inaccessible, assume scraping is allowed
+    console.log(`Robots.txt check failed for ${url}:`, error.message);
+    return {
+      allowed: true,
+      robotsUrl: null,
+      message: 'No robots.txt found - scraping allowed by default'
+    };
+  }
+}
+
+function getNextExecutionTime(cronExpression) {
+  try {
+    const task = cron.schedule(cronExpression, () => {}, { scheduled: false });
+    const next = task.nextDates(1);
+    task.destroy();
+    return next[0] ? next[0].toDate() : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function startScheduledTask(taskId, task) {
+  try {
+    if (scheduledTasks[taskId]) {
+      scheduledTasks[taskId].destroy();
+    }
+    
+    const cronJob = cron.schedule(task.cronExpression, async () => {
+      await executeScheduledTask(taskId, task);
+    }, {
+      scheduled: true,
+      timezone: 'UTC'
+    });
+    
+    scheduledTasks[taskId] = cronJob;
+    console.log(`Started scheduled task ${taskId} with cron: ${task.cronExpression}`);
+  } catch (error) {
+    console.error(`Failed to start scheduled task ${taskId}:`, error);
+  }
+}
+
+async function executeScheduledTask(taskId, task) {
+  let client;
+  try {
+    console.log(`Executing scheduled task ${taskId} for URL: ${task.url}`);
+    
+    // Connect to MongoDB
+    client = new MongoClient(task.mongodbUri || process.env.MONGODB_URI);
+    await client.connect();
+    const db = client.db('tabsaver');
+    
+    // Update task execution stats
+    await db.collection('scheduled_tasks').updateOne(
+      { _id: new ObjectId(taskId) },
+      { 
+        $set: { 
+          lastExecuted: new Date(),
+          nextExecution: getNextExecutionTime(task.cronExpression)
+        },
+        $inc: { executionCount: 1 }
+      }
+    );
+    
+    // Check robots.txt permission (for safety)
+    const robotsCheck = await checkRobotsPermission(task.url);
+    if (!robotsCheck.allowed) {
+      throw new Error(`Scraping no longer allowed for ${task.url}: ${robotsCheck.message}`);
+    }
+    
+    // Fetch and analyze webpage
+    const html = await fetchWebPage(task.url);
+    const extractedContent = await extractContent(html, task.url);
+    const analysis = await analyzeContentWithGemini(extractedContent, task.taskDescription, task.geminiApiKey);
+    
+    // Save execution result
+    const executionResult = {
+      taskId: new ObjectId(taskId),
+      url: task.url,
+      taskDescription: task.taskDescription,
+      executedAt: new Date(),
+      status: 'success',
+      result: {
+        analysis: analysis.analysis,
+        pageInfo: {
+          title: extractedContent.title,
+          siteName: extractedContent.siteName
+        },
+        timestamp: analysis.timestamp
+      },
+      executionTime: new Date() - new Date()
+    };
+    
+    await db.collection('task_results').insertOne(executionResult);
+    
+    // Update success count
+    await db.collection('scheduled_tasks').updateOne(
+      { _id: new ObjectId(taskId) },
+      { $inc: { successCount: 1 } }
+    );
+    
+    console.log(`Successfully executed scheduled task ${taskId}`);
+    
+  } catch (error) {
+    console.error(`Failed to execute scheduled task ${taskId}:`, error);
+    
+    // Save error result
+    if (client) {
+      try {
+        const db = client.db('tabsaver');
+        const errorResult = {
+          taskId: new ObjectId(taskId),
+          url: task.url,
+          taskDescription: task.taskDescription,
+          executedAt: new Date(),
+          status: 'error',
+          error: error.message,
+          executionTime: new Date() - new Date()
+        };
+        
+        await db.collection('task_results').insertOne(errorResult);
+        
+        // Update error count
+        await db.collection('scheduled_tasks').updateOne(
+          { _id: new ObjectId(taskId) },
+          { $inc: { errorCount: 1 } }
+        );
+      } catch (dbError) {
+        console.error(`Failed to save error result for task ${taskId}:`, dbError);
+      }
+    }
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+}
+
+// Load and start existing active scheduled tasks on server startup
+async function loadAndStartScheduledTasks() {
+  // This would be called when the server starts to resume existing tasks
+  // For now, we'll implement this as a simple function that can be called
+  console.log('Server started - scheduled tasks can be loaded via API calls');
 }
 
 // IMPORTANT: Export the app for Vercel

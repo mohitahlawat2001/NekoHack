@@ -25,36 +25,104 @@
       --hover-bg: #475569;
     }
 
-    /* Increased fixed width and prevent overflow */
+    /* Web application styling for larger screens */
     body {
-      width: 520px !important;
-      min-width: 520px !important;
-      max-width: 520px !important;
-      overflow-x: hidden !important;
+      width: 100% !important;
+      min-width: 1200px !important;
+      max-width: none !important;
+      overflow-x: auto !important;
       background-color: var(--bg-primary) !important;
       color: var(--text-primary) !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     }
     
-    .tab-item {
-      width: 440px !important;
-      max-width: 440px !important;
-      min-width: 440px !important;
-      display: flex !important;
-      align-items: center !important;
-      padding: 10px !important;
-      box-sizing: border-box !important;
+    .main-container {
+      width: 100% !important;
+      max-width: 1400px !important;
+      margin: 0 auto !important;
+      padding: 20px !important;
+    }
+    
+    /* Tab navigation styling */
+    .tab-navigation {
+      display: flex;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+      border-radius: 8px 8px 0 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    .tab-button {
+      flex: 1;
+      padding: 15px 20px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+      position: relative;
+    }
+    
+    .tab-button:hover {
+      background-color: var(--hover-bg);
+      color: var(--text-primary);
+    }
+    
+    .tab-button.active {
+      background-color: var(--bg-primary);
+      color: var(--accent-blue);
+      border-bottom-color: var(--accent-blue);
     }
     
     .tab-content {
-      width: 270px !important;
-      min-width: 220px !important;
-      max-width: 320px !important;
-      flex-shrink: 0 !important;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Grid layout for cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+    
+    .full-width-card {
+      grid-column: 1 / -1;
+    }
+    
+    .tab-item {
+      width: 100% !important;
+      max-width: none !important;
+      min-width: auto !important;
+      display: flex !important;
+      align-items: center !important;
+      padding: 12px !important;
+      box-sizing: border-box !important;
+    }
+    
+    .tab-content-item {
+      flex: 1 !important;
+      min-width: 0 !important;
       overflow: hidden !important;
     }
     
     .tab-title {
-      width: 320px !important;
+      width: 100% !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
@@ -65,7 +133,7 @@
     }
     
     .tab-url {
-      width: 320px !important;
+      width: 100% !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
@@ -75,7 +143,7 @@
     }
     
     .tab-notes {
-      width: 320px !important;
+      width: 100% !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
@@ -85,14 +153,14 @@
     }
     
     .tab-actions {
-      width: 110px !important;
-      min-width: 110px !important;
-      max-width: 110px !important;
+      width: auto !important;
+      min-width: 120px !important;
+      max-width: 120px !important;
       flex-shrink: 0 !important;
       display: flex !important;
-      gap: 6px !important;
+      gap: 8px !important;
       justify-content: flex-end !important;
-      margin-left: 10px !important;
+      margin-left: 15px !important;
     }
     
     .tab-actions button {
@@ -108,22 +176,22 @@
     }
     
     .group-container {
-      width: 440px !important;
-      max-width: 440px !important;
+      width: 100% !important;
+      max-width: none !important;
       overflow: hidden !important;
-      margin-bottom: 16px !important;
+      margin-bottom: 20px !important;
     }
     
     .group-header {
       width: 100% !important;
-      max-width: 440px !important;
+      max-width: none !important;
       box-sizing: border-box !important;
       background: linear-gradient(135deg, var(--bg-tertiary), #475569) !important;
       border-bottom: 1px solid var(--border-color) !important;
     }
     
     .group-title {
-      max-width: 220px !important;
+      max-width: none !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       white-space: nowrap !important;
@@ -145,12 +213,14 @@
     }
     
     .main-container {
-      width: 518px !important;
-      max-width: 518px !important;
+      width: 100% !important;
+      max-width: 1400px !important;
+      margin: 0 auto !important;
+      padding: 20px !important;
     }
     
     .input-field {
-      max-width: 420px !important;
+      max-width: none !important;
       background-color: var(--bg-tertiary) !important;
       border-color: var(--border-color) !important;
       color: var(--text-primary) !important;
@@ -166,7 +236,7 @@
     }
 
     .button-group {
-      max-width: 420px !important;
+      max-width: none !important;
     }
 
     .password-toggle {
@@ -439,255 +509,429 @@
 </head>
 <body class="m-0 p-0 font-sans">
   <div class="p-4 main-container">
-    <h1 class="text-center text-xl font-bold mb-4" style="color: var(--text-primary);">
-      <img src="icons/icon128.png" alt="NekoHack Icon" class="inline-block align-middle title-icon" style="width: 28px; height: 28px; vertical-align: middle;"> NekoHack - Secure Tab Manager
+    <h1 class="text-center text-3xl font-bold mb-6" style="color: var(--text-primary);">
+      <img src="icons/icon128.png" alt="NekoHack Icon" class="inline-block align-middle title-icon" style="width: 32px; height: 32px; vertical-align: middle;"> NekoHack - AI Scheduled Task Service
     </h1>
     
-    <!-- MongoDB Connection Section -->
-    <div class="card rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-3">
-        <i class="fas fa-database section-icon"></i>MongoDB Connection
-      </h2>
-      <div class="flex mb-2">
-        <input type="text" id="mongodb-uri" placeholder="MongoDB Connection URI" 
-               class="flex-1 px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
-        <button id="save-connection" 
-                class="btn-primary text-white px-4 py-2 rounded-r-md transition-colors text-sm font-medium"
-                style="min-width: 70px;">
-          <i class="fas fa-save fa-icon"></i>Save
-        </button>
-      </div>
-      <div id="connection-status" class="text-sm mt-1"></div>
-    </div>
-
-    <!-- Security Section -->
-    <div class="card security-section rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-3">
-        <i class="fas fa-lock section-icon"></i>Data Encryption
-      </h2>
-      
-      <!-- Secret Key Input -->
-      <div class="password-input-container mb-2">
-        <input type="password" id="secret-key" placeholder="Enter secret key for encryption" 
-               class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm input-field">
-        <i class="fas fa-eye password-toggle" id="toggle-key-visibility" title="Show/Hide Key"></i>
-      </div>
-      
-      <div class="flex gap-2 mb-3">
-        <button id="save-secret-key" 
-                class="btn-success text-white px-4 py-2 rounded-md transition-colors text-sm font-medium flex-1">
-          <i class="fas fa-key fa-icon"></i>Save Secret Key
-        </button>
-        <button id="update-secret-key" 
-                class="btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium hidden">
-          <i class="fas fa-edit fa-icon"></i>Update Key
-        </button>
-        <button id="clear-secret-key" 
-                class="btn-danger text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
-          <i class="fas fa-trash fa-icon"></i>Clear
-        </button>
-      </div>
-
-      <!-- Current Key Display -->
-      <div id="current-key-section" class="hidden">
-        <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">
-          <i class="fas fa-key fa-icon"></i>Current Secret Key:
-        </label>
-        <div class="current-key-display">
-          <div class="key-actions">
-            <button class="key-action-btn" id="toggle-current-key-visibility" title="Show/Hide Key">
-              <i class="fas fa-eye"></i>
-            </button>
-            <button class="key-action-btn" id="copy-current-key" title="Copy Key">
-              <i class="fas fa-copy"></i>
-            </button>
-          </div>
-          <div id="current-key-display" class="masked-key pr-12">••••••••••••••••</div>
-        </div>
-      </div>
-      
-      <div class="encryption-status mt-3">
-        <i class="fas fa-shield-alt security-icon"></i>
-        <div id="encryption-status">No secret key set - data will be stored unencrypted</div>
-      </div>
-      
-      <div class="text-xs mt-2 warning-box p-2 rounded border-l-2">
-        <i class="fas fa-exclamation-triangle status-icon warning-icon"></i>
-        <strong>Important:</strong> Keep your secret key safe! Without it, you cannot decrypt your saved data. Use a strong, memorable key.
-      </div>
-    </div>
-
-    <!-- Web Analysis Section -->
-    <div class="card rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-3">
-        <i class="fas fa-search section-icon"></i>Web Page Analysis
-      </h2>
-      
-      <!-- Gemini API Key Input -->
-      <div class="password-input-container mb-3">
-        <input type="password" id="gemini-api-key" placeholder="Enter Gemini API key" 
-               class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
-        <i class="fas fa-eye password-toggle" id="toggle-gemini-key-visibility" title="Show/Hide API Key"></i>
-      </div>
-      
-      <!-- URL Input -->
-      <div class="mb-3">
-        <input type="url" id="analysis-url" placeholder="Enter website URL to analyze" 
-               class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
-        <div class="text-xs mt-1" style="color: var(--text-muted);">
-          <i class="fas fa-info-circle fa-icon"></i>Enter the full URL (e.g., https://example.com)
-        </div>
-      </div>
-      
-      <!-- Query Input -->
-      <div class="mb-3">
-        <textarea id="analysis-query" placeholder="What would you like to know about this page?" 
-                  class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field"
-                  rows="3" style="resize: vertical;"></textarea>
-        <div class="text-xs mt-1" style="color: var(--text-muted);">
-          <i class="fas fa-info-circle fa-icon"></i>Examples: "Summarize the main points", "What is this article about?", "Extract key insights"
-        </div>
-      </div>
-      
-      <!-- Analyze Button -->
-      <button id="analyze-webpage" 
-              class="w-full btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
-        <i class="fas fa-brain fa-icon"></i>Analyze Web Page
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button class="tab-button active" data-tab="tab-management">
+        <i class="fas fa-cogs fa-icon"></i>Tab Management
       </button>
-      
-      <!-- Analysis Status -->
-      <div id="analysis-status" class="text-sm mt-2"></div>
-      
-      <!-- Analysis Results -->
-      <div id="analysis-results" class="mt-4 hidden">
-        <div class="bg-tertiary border rounded-md p-3" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
-          <h4 class="font-semibold text-sm mb-2" style="color: var(--text-primary);">
-            <i class="fas fa-lightbulb fa-icon"></i>Analysis Results
-          </h4>
-          <div id="analysis-content" class="text-sm" style="color: var(--text-secondary); white-space: pre-wrap; line-height: 1.5;"></div>
-          <div class="mt-2 pt-2 border-t text-xs" style="border-color: var(--border-color); color: var(--text-muted);">
-            <span id="analysis-page-info"></span>
+      <button class="tab-button" data-tab="web-analysis">
+        <i class="fas fa-search fa-icon"></i>Web Analysis
+      </button>
+      <button class="tab-button" data-tab="scheduled-tasks">
+        <i class="fas fa-clock fa-icon"></i>AI Scheduled Tasks
+      </button>
+      <button class="tab-button" data-tab="settings">
+        <i class="fas fa-cog fa-icon"></i>Settings
+      </button>
+    </div>
+
+    <!-- Tab Management Content -->
+    <div id="tab-management" class="tab-content active">
+      <div class="cards-grid">
+        <!-- Group Selection Section -->
+        <div class="card rounded-lg shadow p-4">
+          <h2 class="text-lg font-semibold mb-3">
+            <i class="fas fa-layer-group section-icon"></i>Select or Create Group
+          </h2>
+          
+          <!-- Radio buttons for selection method -->
+          <div class="flex gap-6 mb-3">
+            <label class="flex items-center">
+              <input type="radio" name="group-method" value="new" id="new-group-radio" class="mr-2" checked>
+              <span class="text-sm font-medium" style="color: var(--text-primary);">
+                <i class="fas fa-plus fa-icon"></i>Create New Group
+              </span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="group-method" value="existing" id="existing-group-radio" class="mr-2">
+              <span class="text-sm font-medium" style="color: var(--text-primary);">
+                <i class="fas fa-list fa-icon"></i>Use Existing Group
+              </span>
+            </label>
+          </div>
+
+          <!-- New group input -->
+          <div id="new-group-section" class="mb-3">
+            <input type="text" id="new-group-name" placeholder="Enter new group name" 
+                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+            <div class="text-xs mt-1" style="color: var(--text-muted);">
+              <i class="fas fa-info-circle fa-icon"></i>Default: 2025-06-22 (Today's date)
+            </div>
+          </div>
+
+          <!-- Existing group selection -->
+          <div id="existing-group-section" class="mb-3 hidden">
+            <select id="existing-groups-select" 
+                    class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+              <option value="">Select an existing group</option>
+            </select>
+            <div class="text-xs mt-1" style="color: var(--text-muted);">
+              <i class="fas fa-info-circle fa-icon"></i>Choose from previously created groups
+            </div>
+          </div>
+
+          <!-- Notes Section -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
+              <i class="fas fa-sticky-note fa-icon"></i>Notes (Optional)
+            </label>
+            <textarea id="tab-notes" placeholder="Add notes for this tab/group..." 
+                      class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field"
+                      rows="2" style="resize: none;"></textarea>
+            <div class="text-xs mt-1" style="color: var(--text-muted);">
+              <i class="fas fa-info-circle fa-icon"></i>These notes will be saved with your tabs
+            </div>
+          </div>
+
+          <!-- Current selected group display -->
+          <div class="group-display border rounded-md p-3">
+            <div class="text-xs font-medium mb-1 group-display-text">
+              <i class="fas fa-tag fa-icon"></i>Selected Group:
+            </div>
+            <div id="current-group-display" class="text-sm font-semibold truncate" style="max-width: 400px; color: var(--text-primary);">2025-06-22</div>
+          </div>
+        </div>
+
+        <!-- Tab Management Actions -->
+        <div class="card rounded-lg shadow p-4">
+          <h2 class="text-lg font-semibold mb-3">
+            <i class="fas fa-bookmark section-icon"></i>Save Tabs
+          </h2>
+          <div class="flex gap-3 button-group">
+            <button id="save-current-tab" 
+                    class="flex-1 btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
+              <i class="fas fa-bookmark fa-icon"></i>Save Current Tab
+            </button>
+            <button id="save-all-tabs" 
+                    class="flex-1 btn-success text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
+              <i class="fas fa-save fa-icon"></i>Save All Tabs
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Tabs Section -->
+      <div class="card rounded-lg shadow p-4 full-width-card">
+        <h2 class="text-lg font-semibold mb-3">
+          <i class="fas fa-history section-icon"></i>Saved Tabs
+        </h2>
+        <!-- Search Bar -->
+        <div class="mb-3 px-1">
+          <input type="text" id="search-bar" class="form-control" placeholder="🔍 Search saved tabs...">
+        </div>
+        
+        <div class="flex gap-3 mb-4">
+          <select id="group-filter" 
+                  class="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  style="max-width: 200px;">
+            <option value="">All groups</option>
+          </select>
+          <input type="date" id="date-filter" value="2025-06-22" 
+                 class="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                 style="max-width: 200px;">
+          <button id="refresh-tabs" 
+                  class="btn-secondary px-4 py-2 rounded-md transition-colors text-sm font-medium"
+                  style="min-width: 100px;">
+            <i class="fas fa-sync-alt fa-icon"></i>Refresh
+          </button>
+        </div>
+        <div id="tabs-list" class="max-h-[500px] overflow-y-auto" style="width: 100%; max-width: none;">
+          <!-- Saved tabs will be displayed here -->
+          <div class="text-center py-6" style="color: var(--text-muted);">
+            <i class="fas fa-inbox fa-2x mb-2"></i>
+            <div>No saved tabs found</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Web Analysis Content -->
+    <div id="web-analysis" class="tab-content">
+      <div class="cards-grid">
+        <!-- Web Analysis Section -->
+        <div class="card rounded-lg shadow p-4 full-width-card">
+          <h2 class="text-lg font-semibold mb-3">
+            <i class="fas fa-search section-icon"></i>Web Page Analysis
+          </h2>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <!-- Gemini API Key Input -->
+              <div class="password-input-container mb-3">
+                <input type="password" id="gemini-api-key" placeholder="Enter Gemini API key" 
+                       class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+                <i class="fas fa-eye password-toggle" id="toggle-gemini-key-visibility" title="Show/Hide API Key"></i>
+              </div>
+              
+              <!-- URL Input -->
+              <div class="mb-3">
+                <input type="url" id="analysis-url" placeholder="Enter website URL to analyze" 
+                       class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+                <div class="text-xs mt-1" style="color: var(--text-muted);">
+                  <i class="fas fa-info-circle fa-icon"></i>Enter the full URL (e.g., https://example.com)
+                </div>
+              </div>
+              
+              <!-- Query Input -->
+              <div class="mb-3">
+                <textarea id="analysis-query" placeholder="What would you like to know about this page?" 
+                          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field"
+                          rows="4" style="resize: vertical;"></textarea>
+                <div class="text-xs mt-1" style="color: var(--text-muted);">
+                  <i class="fas fa-info-circle fa-icon"></i>Examples: "Summarize the main points", "What is this article about?", "Extract key insights"
+                </div>
+              </div>
+              
+              <!-- Analyze Button -->
+              <button id="analyze-webpage" 
+                      class="w-full btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
+                <i class="fas fa-brain fa-icon"></i>Analyze Web Page
+              </button>
+              
+              <!-- Analysis Status -->
+              <div id="analysis-status" class="text-sm mt-2"></div>
+            </div>
+            
+            <div>
+              <!-- Analysis Results -->
+              <div id="analysis-results" class="hidden">
+                <div class="bg-tertiary border rounded-md p-4" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+                  <h4 class="font-semibold text-sm mb-3" style="color: var(--text-primary);">
+                    <i class="fas fa-lightbulb fa-icon"></i>Analysis Results
+                  </h4>
+                  <div id="analysis-content" class="text-sm mb-3" style="color: var(--text-secondary); white-space: pre-wrap; line-height: 1.5; max-height: 300px; overflow-y: auto;"></div>
+                  <div class="pt-2 border-t text-xs" style="border-color: var(--border-color); color: var(--text-muted);">
+                    <span id="analysis-page-info"></span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="text-xs mt-3 warning-box p-2 rounded border-l-2">
+                <i class="fas fa-exclamation-triangle status-icon warning-icon"></i>
+                <strong>Note:</strong> Your Gemini API key is required for analysis. It's not stored and only used for this request.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Scheduled Tasks Content -->
+    <div id="scheduled-tasks" class="tab-content">
+      <div class="cards-grid">
+        <!-- Create New Task -->
+        <div class="card rounded-lg shadow p-4">
+          <h2 class="text-lg font-semibold mb-3">
+            <i class="fas fa-plus section-icon"></i>Create Scheduled Task
+          </h2>
+          
+          <!-- URL Input -->
+          <div class="mb-3">
+            <input type="url" id="task-url" placeholder="Enter website URL to monitor" 
+                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+            <div class="text-xs mt-1" style="color: var(--text-muted);">
+              <i class="fas fa-info-circle fa-icon"></i>URL will be checked for robots.txt compliance
+            </div>
+          </div>
+          
+          <!-- Task Description -->
+          <div class="mb-3">
+            <textarea id="task-description" placeholder="Describe what you want to extract or analyze from this page..." 
+                      class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field"
+                      rows="3" style="resize: vertical;"></textarea>
+            <div class="text-xs mt-1" style="color: var(--text-muted);">
+              <i class="fas fa-info-circle fa-icon"></i>Be specific about what data you want to extract
+            </div>
+          </div>
+          
+          <!-- Schedule Input -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
+              <i class="fas fa-clock fa-icon"></i>Schedule (Cron Expression)
+            </label>
+            <select id="schedule-preset" class="w-full px-3 py-2 border rounded-md mb-2 text-sm input-field">
+              <option value="">Select a preset...</option>
+              <option value="0 */5 * * * *">Every 5 minutes</option>
+              <option value="0 */15 * * * *">Every 15 minutes</option>
+              <option value="0 */30 * * * *">Every 30 minutes</option>
+              <option value="0 0 * * * *">Every hour</option>
+              <option value="0 0 */6 * * *">Every 6 hours</option>
+              <option value="0 0 0 * * *">Daily at midnight</option>
+              <option value="0 0 0 * * 1">Weekly on Monday</option>
+              <option value="custom">Custom expression...</option>
+            </select>
+            <input type="text" id="cron-expression" placeholder="Enter custom cron expression" 
+                   class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field hidden">
+            <div class="text-xs mt-1" style="color: var(--text-muted);">
+              <i class="fas fa-info-circle fa-icon"></i>Format: second minute hour day month dayOfWeek
+            </div>
+          </div>
+          
+          <!-- Gemini API Key -->
+          <div class="password-input-container mb-3">
+            <input type="password" id="task-gemini-api-key" placeholder="Enter Gemini API key" 
+                   class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+            <i class="fas fa-eye password-toggle" id="toggle-task-gemini-key-visibility" title="Show/Hide API Key"></i>
+          </div>
+          
+          <!-- Check Robots.txt Button -->
+          <button id="check-robots" 
+                  class="w-full btn-secondary mb-3 px-4 py-2 rounded-md transition-colors text-sm font-medium">
+            <i class="fas fa-robot fa-icon"></i>Check if Scraping is Allowed
+          </button>
+          
+          <div id="robots-status" class="text-sm mb-3"></div>
+          
+          <!-- Create Task Button -->
+          <button id="create-task" 
+                  class="w-full btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium" disabled>
+            <i class="fas fa-plus fa-icon"></i>Create Scheduled Task
+          </button>
+        </div>
+        
+        <!-- Task Status Overview -->
+        <div class="card rounded-lg shadow p-4">
+          <h2 class="text-lg font-semibold mb-3">
+            <i class="fas fa-chart-bar section-icon"></i>Task Overview
+          </h2>
+          <div id="task-overview" class="space-y-3">
+            <div class="text-center py-4" style="color: var(--text-muted);">
+              <i class="fas fa-tasks fa-2x mb-2"></i>
+              <div>No scheduled tasks yet</div>
+            </div>
           </div>
         </div>
       </div>
       
-      <div class="text-xs mt-2 warning-box p-2 rounded border-l-2">
-        <i class="fas fa-exclamation-triangle status-icon warning-icon"></i>
-        <strong>Note:</strong> Your Gemini API key is required for analysis. It's not stored and only used for this request.
-      </div>
-    </div>
-
-    <!-- Group Selection Section -->
-    <div class="card rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-3">
-        <i class="fas fa-layer-group section-icon"></i>Select or Create Group
-      </h2>
-      
-      <!-- Radio buttons for selection method -->
-      <div class="flex gap-6 mb-3">
-        <label class="flex items-center">
-          <input type="radio" name="group-method" value="new" id="new-group-radio" class="mr-2" checked>
-          <span class="text-sm font-medium" style="color: var(--text-primary);">
-            <i class="fas fa-plus fa-icon"></i>Create New Group
-          </span>
-        </label>
-        <label class="flex items-center">
-          <input type="radio" name="group-method" value="existing" id="existing-group-radio" class="mr-2">
-          <span class="text-sm font-medium" style="color: var(--text-primary);">
-            <i class="fas fa-list fa-icon"></i>Use Existing Group
-          </span>
-        </label>
-      </div>
-
-      <!-- New group input -->
-      <div id="new-group-section" class="mb-3">
-        <input type="text" id="new-group-name" placeholder="Enter new group name" 
-               class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
-        <div class="text-xs mt-1" style="color: var(--text-muted);">
-          <i class="fas fa-info-circle fa-icon"></i>Default: 2025-06-22 (Today's date)
+      <!-- Active Tasks List -->
+      <div class="card rounded-lg shadow p-4 full-width-card">
+        <h2 class="text-lg font-semibold mb-3">
+          <i class="fas fa-list section-icon"></i>Scheduled Tasks
+        </h2>
+        
+        <div class="flex gap-3 mb-4">
+          <button id="refresh-tasks" 
+                  class="btn-secondary px-4 py-2 rounded-md transition-colors text-sm font-medium">
+            <i class="fas fa-sync-alt fa-icon"></i>Refresh
+          </button>
         </div>
-      </div>
-
-      <!-- Existing group selection -->
-      <div id="existing-group-section" class="mb-3 hidden">
-        <select id="existing-groups-select" 
-                class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
-          <option value="">Select an existing group</option>
-        </select>
-        <div class="text-xs mt-1" style="color: var(--text-muted);">
-          <i class="fas fa-info-circle fa-icon"></i>Choose from previously created groups
+        
+        <div id="scheduled-tasks-list" class="max-h-[400px] overflow-y-auto">
+          <!-- Tasks will be displayed here -->
+          <div class="text-center py-6" style="color: var(--text-muted);">
+            <i class="fas fa-clock fa-2x mb-2"></i>
+            <div>No scheduled tasks found</div>
+          </div>
         </div>
-      </div>
-
-      <!-- Notes Section -->
-      <div class="mb-3">
-        <label class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
-          <i class="fas fa-sticky-note fa-icon"></i>Notes (Optional)
-        </label>
-        <textarea id="tab-notes" placeholder="Add notes for this tab/group..." 
-                  class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field"
-                  rows="2" style="resize: none;"></textarea>
-        <div class="text-xs mt-1" style="color: var(--text-muted);">
-          <i class="fas fa-info-circle fa-icon"></i>These notes will be saved with your tabs
-        </div>
-      </div>
-
-      <!-- Current selected group display -->
-      <div class="group-display border rounded-md p-3">
-        <div class="text-xs font-medium mb-1 group-display-text">
-          <i class="fas fa-tag fa-icon"></i>Selected Group:
-        </div>
-        <div id="current-group-display" class="text-sm font-semibold truncate" style="max-width: 400px; color: var(--text-primary);">2025-06-22</div>
-      </div>
-    </div>
-
-    <!-- Tab Management Section -->
-    <div class="card rounded-lg shadow p-4 mb-4">
-      <h2 class="text-lg font-semibold mb-3">
-        <i class="fas fa-cogs section-icon"></i>Tab Management
-      </h2>
-      <div class="flex gap-3 button-group">
-        <button id="save-current-tab" 
-                class="flex-1 btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
-          <i class="fas fa-bookmark fa-icon"></i>Save Current Tab
-        </button>
-        <button id="save-all-tabs" 
-                class="flex-1 btn-success text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
-          <i class="fas fa-save fa-icon"></i>Save All Tabs
-        </button>
-      </div>
-    </div>
-
-    <!-- Saved Tabs Section -->
-    <div class="card rounded-lg shadow p-4">
-      <h2 class="text-lg font-semibold mb-3">
-        <i class="fas fa-history section-icon"></i>Saved Tabs
-      </h2>
-      <!-- Search Bar -->
-      <div class="mb-3 px-1">
-        <input type="text" id="search-bar" class="form-control" placeholder="🔍 Search saved tabs...">
       </div>
       
-      <div class="flex gap-3 mb-4">
-        <select id="group-filter" 
-                class="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                style="max-width: 150px;">
-          <option value="">All groups</option>
-        </select>
-        <input type="date" id="date-filter" value="2025-06-22" 
-               class="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-               style="max-width: 150px;">
-        <button id="refresh-tabs" 
-                class="btn-secondary px-4 py-2 rounded-md transition-colors text-sm font-medium"
-                style="min-width: 80px;">
-          <i class="fas fa-sync-alt fa-icon"></i>Refresh
-        </button>
+      <!-- Task Results -->
+      <div class="card rounded-lg shadow p-4 full-width-card">
+        <h2 class="text-lg font-semibold mb-3">
+          <i class="fas fa-chart-line section-icon"></i>Task Results
+        </h2>
+        
+        <div class="flex gap-3 mb-4">
+          <select id="task-filter" 
+                  class="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field"
+                  style="max-width: 250px;">
+            <option value="">All tasks</option>
+          </select>
+          <button id="refresh-results" 
+                  class="btn-secondary px-4 py-2 rounded-md transition-colors text-sm font-medium">
+            <i class="fas fa-sync-alt fa-icon"></i>Refresh Results
+          </button>
+        </div>
+        
+        <div id="task-results-list" class="max-h-[400px] overflow-y-auto">
+          <!-- Results will be displayed here -->
+          <div class="text-center py-6" style="color: var(--text-muted);">
+            <i class="fas fa-chart-line fa-2x mb-2"></i>
+            <div>No task results found</div>
+          </div>
+        </div>
       </div>
-      <div id="tabs-list" class="max-h-[350px] overflow-y-auto" style="width: 440px; max-width: 440px;">
-        <!-- Saved tabs will be displayed here -->
-        <div class="text-center py-6" style="color: var(--text-muted);">
-          <i class="fas fa-inbox fa-2x mb-2"></i>
-          <div>No saved tabs found</div>
+    </div>
+
+    <!-- Settings Content -->
+    <div id="settings" class="tab-content">
+      <div class="cards-grid">
+        <!-- MongoDB Connection Section -->
+        <div class="card rounded-lg shadow p-4">
+          <h2 class="text-lg font-semibold mb-3">
+            <i class="fas fa-database section-icon"></i>MongoDB Connection
+          </h2>
+          <div class="flex mb-2">
+            <input type="text" id="mongodb-uri" placeholder="MongoDB Connection URI" 
+                   class="flex-1 px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm input-field">
+            <button id="save-connection" 
+                    class="btn-primary text-white px-4 py-2 rounded-r-md transition-colors text-sm font-medium"
+                    style="min-width: 70px;">
+              <i class="fas fa-save fa-icon"></i>Save
+            </button>
+          </div>
+          <div id="connection-status" class="text-sm mt-1"></div>
+        </div>
+
+        <!-- Security Section -->
+        <div class="card security-section rounded-lg shadow p-4">
+          <h2 class="text-lg font-semibold mb-3">
+            <i class="fas fa-lock section-icon"></i>Data Encryption
+          </h2>
+          
+          <!-- Secret Key Input -->
+          <div class="password-input-container mb-2">
+            <input type="password" id="secret-key" placeholder="Enter secret key for encryption" 
+                   class="w-full px-3 py-2 pr-12 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm input-field">
+            <i class="fas fa-eye password-toggle" id="toggle-key-visibility" title="Show/Hide Key"></i>
+          </div>
+          
+          <div class="flex gap-2 mb-3">
+            <button id="save-secret-key" 
+                    class="btn-success text-white px-4 py-2 rounded-md transition-colors text-sm font-medium flex-1">
+              <i class="fas fa-key fa-icon"></i>Save Secret Key
+            </button>
+            <button id="update-secret-key" 
+                    class="btn-primary text-white px-4 py-2 rounded-md transition-colors text-sm font-medium hidden">
+              <i class="fas fa-edit fa-icon"></i>Update Key
+            </button>
+            <button id="clear-secret-key" 
+                    class="btn-danger text-white px-4 py-2 rounded-md transition-colors text-sm font-medium">
+              <i class="fas fa-trash fa-icon"></i>Clear
+            </button>
+          </div>
+
+          <!-- Current Key Display -->
+          <div id="current-key-section" class="hidden">
+            <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">
+              <i class="fas fa-key fa-icon"></i>Current Secret Key:
+            </label>
+            <div class="current-key-display">
+              <div class="key-actions">
+                <button class="key-action-btn" id="toggle-current-key-visibility" title="Show/Hide Key">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="key-action-btn" id="copy-current-key" title="Copy Key">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+              <div id="current-key-display" class="masked-key pr-12">••••••••••••••••</div>
+            </div>
+          </div>
+          
+          <div class="encryption-status mt-3">
+            <i class="fas fa-shield-alt security-icon"></i>
+            <div id="encryption-status">No secret key set - data will be stored unencrypted</div>
+          </div>
+          
+          <div class="text-xs mt-2 warning-box p-2 rounded border-l-2">
+            <i class="fas fa-exclamation-triangle status-icon warning-icon"></i>
+            <strong>Important:</strong> Keep your secret key safe! Without it, you cannot decrypt your saved data. Use a strong, memorable key.
+          </div>
         </div>
       </div>
     </div>
