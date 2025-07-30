@@ -69,6 +69,7 @@ The following endpoints are configured:
 - `/save-all-tabs` - Save all open tabs
 - `/load-tabs` - Load saved tabs for a specific date
 - `/delete-tab` - Delete a specific tab
+- `/web-analysis` - Analyze webpage content with AI (NEW)
 
 ### Notes
 
@@ -102,6 +103,7 @@ The following endpoints are configured:
 - 📅 **Date-organized storage** - Easily find tabs saved on specific dates
 - 🗑️ **Delete saved tabs** - Remove tabs you no longer need
 - ☁️ **Cloud storage** - Your tabs are saved to MongoDB (persistent across devices)
+- 🤖 **AI Web Analysis** - Analyze any webpage with AI-powered insights using Google Gemini
 
 ### How to Use
 
@@ -118,6 +120,13 @@ The following endpoints are configured:
 3. **Managing Tabs:**
    - Use the delete button (🗑️) next to any saved tab to remove it
    - Tabs are automatically organized by the date they were saved
+
+4. **AI Web Analysis:** (NEW)
+   - Enter your Google Gemini API key in the "Web Page Analysis" section
+   - Provide any website URL you want to analyze
+   - Ask specific questions about the webpage content
+   - Get AI-powered insights, summaries, and answers to your questions
+   - Examples: "Summarize the main points", "What is this article about?", "Extract key insights"
 
 ### Troubleshooting
 
