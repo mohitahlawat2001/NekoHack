@@ -25,7 +25,12 @@
       --hover-bg: #475569;
     }
 
-    /* Increased fixed width and prevent overflow */
+    /* Base styles for all screen sizes */
+    html {
+      background-color: var(--bg-primary) !important;
+    }
+
+    /* Default extension popup width */
     body {
       width: 520px !important;
       min-width: 520px !important;
@@ -33,6 +38,96 @@
       overflow-x: hidden !important;
       background-color: var(--bg-primary) !important;
       color: var(--text-primary) !important;
+      margin: 0 auto;
+    }
+
+    /* Responsive design for full screen viewing */
+    @media screen and (min-width: 768px) {
+      body {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100vh !important;
+        padding: 20px !important;
+        box-sizing: border-box !important;
+      }
+
+      .main-container {
+        width: 100% !important;
+        max-width: 800px !important;
+        margin: 0 auto !important;
+        padding: 20px !important;
+        box-sizing: border-box !important;
+      }
+
+      .card {
+        margin-bottom: 24px !important;
+        padding: 24px !important;
+      }
+
+      .input-field, .button-group {
+        max-width: 100% !important;
+      }
+
+      .tab-item {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+      }
+
+      .tab-content {
+        width: calc(100% - 150px) !important;
+        min-width: calc(100% - 150px) !important;
+        max-width: calc(100% - 150px) !important;
+      }
+
+      .tab-title, .tab-url, .tab-notes {
+        width: 100% !important;
+      }
+
+      .group-container {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      .group-header {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      .group-title {
+        max-width: calc(100% - 120px) !important;
+      }
+
+      #tabs-list {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      h1 {
+        font-size: 2rem !important;
+        margin-bottom: 2rem !important;
+      }
+
+      h2 {
+        font-size: 1.5rem !important;
+      }
+    }
+
+    /* Large desktop screens */
+    @media screen and (min-width: 1200px) {
+      .main-container {
+        max-width: 1000px !important;
+        padding: 30px !important;
+      }
+
+      .card {
+        padding: 30px !important;
+      }
+
+      h1 {
+        font-size: 2.5rem !important;
+      }
     }
     
     .tab-item {
@@ -144,9 +239,13 @@
       max-width: 300px !important;
     }
     
+    /* Main container - responsive */
     .main-container {
       width: 518px !important;
       max-width: 518px !important;
+      margin: 0 auto;
+      padding: 16px;
+      box-sizing: border-box;
     }
     
     .input-field {
@@ -437,8 +536,8 @@
     }
   </style>
 </head>
-<body class="m-0 p-0 font-sans">
-  <div class="p-4 main-container">
+<body class="m-0 font-sans">
+  <div class="main-container">
     <h1 class="text-center text-xl font-bold mb-4" style="color: var(--text-primary);">
       <img src="icons/icon128.png" alt="NekoHack Icon" class="inline-block align-middle title-icon" style="width: 28px; height: 28px; vertical-align: middle;"> NekoHack - Secure Tab Manager
     </h1>
